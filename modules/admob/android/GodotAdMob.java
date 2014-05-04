@@ -1,8 +1,11 @@
 /*
- * Activity:
- * 	<activity android:name="com.google.ads.AdActivity"
- *   	android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize">
- *  </activity>
+ *
+ * <meta-data android:name="com.google.android.gms.version"
+ *       android:value="@integer/google_play_services_version"/>
+ *
+ * Activity: * 	
+ * <activity android:name="com.google.android.gms.ads.AdActivity"
+ *       android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"/>
  *  
  *  Target API level at least 13
  */
@@ -16,12 +19,12 @@ import android.view.ViewGroup.LayoutParams;
 import android.widget.RelativeLayout;
 
 import com.google.ads.Ad;
-import com.google.ads.AdListener;
-import com.google.ads.AdRequest;
-import com.google.ads.AdSize;
-import com.google.ads.AdView;
-import com.google.ads.InterstitialAd;
-import com.google.ads.AdRequest.ErrorCode;
+import com.google.gms.ads.AdListener;
+import com.google.gms.ads.AdRequest;
+import com.google.gms.ads.AdSize;
+import com.google.gms.ads.AdView;
+import com.google.gms.ads.InterstitialAd;
+import com.google.gms.ads.AdRequest.ErrorCode;
 
 public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 
@@ -42,35 +45,35 @@ public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 	int layoutRule2;
 	
 	@Override
-	public void onReceiveAd(Ad ad) {
+	public void onAdLoaded() {
 	  if (ad == interstitial) {
-		Log.d("godot", "AdMob: onReceiveAd");
+		Log.d("godot", "AdMob: onAdLoaded");
 	    interstitial.show();
 	    adReceived = true;
 	  }
 	}
 
 	@Override
-	public void onDismissScreen(Ad arg0) {
-		Log.d("godot", "AdMob: onDismissScreen");	
+	public void onAdClosed() {
+		Log.d("godot", "AdMob: onAdClosed");
 		screenDismissed = true;
 	}
 
 	@Override
-	public void onFailedToReceiveAd(Ad arg0, ErrorCode arg1) {
-		Log.w("godot", "AdMob: onFailedToReceiveAd-> " + arg1.toString());
+	public void onAdFailedToLoad(int errorCode) {
+		Log.w("godot", "AdMob: onAdFailedToLoad-> " + errorCode.toString());
 		failedToReceiveAd = true;
 	}
 
 	@Override
-	public void onLeaveApplication(Ad arg0) {
-		Log.d("godot", "AdMob: onLeaveApplication");
+	public void onAdLeftApplication() {
+		Log.d("godot", "AdMob: onAdLeftApplication");
 		applicationLeaved = true;
 	}
 
 	@Override
-	public void onPresentScreen(Ad arg0) {
-		Log.d("godot", "AdMob: onPresentScreen");
+	public void onAdOpened() {
+		Log.d("godot", "AdMob: onAdOpened");
 		presentScreen = true;
 	} 	
 	
@@ -81,6 +84,9 @@ public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 		
 		// Create banner
 		adView = new AdView(activity, AdSize.SMART_BANNER, p_key);
+		adView = new AdView(activity);
+		adView.setAdUnitId(p_key);
+		adView.setAdSize(AdSize.BANNER);
 	
 		RelativeLayout layout = ((Godot)activity).layout;
 		RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT,
