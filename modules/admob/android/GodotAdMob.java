@@ -18,13 +18,13 @@ import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.RelativeLayout;
 
-import com.google.ads.Ad;
-import com.google.gms.ads.AdListener;
-import com.google.gms.ads.AdRequest;
-import com.google.gms.ads.AdSize;
-import com.google.gms.ads.AdView;
-import com.google.gms.ads.InterstitialAd;
-import com.google.gms.ads.AdRequest.ErrorCode;
+import com.google.android.gms.ads.Ad;
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.InterstitialAd;
+import com.google.android.gms.ads.AdRequest.ErrorCode;
 
 public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 
