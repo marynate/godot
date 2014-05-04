@@ -5,7 +5,7 @@ def configure(env):
 
 	if env['platform'] == "iphone":
 
-		env.Append(LINKFLAGS=['-ObjC','-framework','MessageUI','-framework','AdSupport','-framework','CoreTelephony','-framework','AudioToolBox'])
+		env.Append(LINKFLAGS=['-ObjC','-framework','MessageUI','-framework','AdSupport','-framework','CoreTelephony','-framework','AVFoundation'])
 		env.Append(LIBPATH=['#modules/admob/sdk'])
 		env.Append(LIBS=['GoogleAdMobAds'])
 	if (env['platform'] == 'android'):
