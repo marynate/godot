@@ -1,0 +1,10 @@
+import string
+sources = string.split("""admob_ios.mm
+	AdMobBanner.m
+	AdMobInterstitial.m
+	register_types.cpp""")
+
+Import('env')
+
+if (env["platform"]=="iphone"):
+	env.add_source_files(env.modules_sources, sources)
