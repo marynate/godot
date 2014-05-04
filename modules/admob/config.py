@@ -9,7 +9,7 @@ def configure(env):
 		env.Append(LIBPATH=['#modules/admob/sdk'])
 		env.Append(LIBS=['GoogleAdMobAds'])
 	if (env['platform'] == 'android'):
-		env.android_module_library("android/GoogleAdMobAdsSdk-6.2.1.jar")
+		env.android_module_library("android/GoogleAdMobAdsSdk-6.4.1.jar")
 		env.android_module_file("android/GodotAdMob.java")
 		env.android_module_manifest("android/AndroidManifestChunk.xml")
 		env.disable_module()
