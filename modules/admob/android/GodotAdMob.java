@@ -18,20 +18,20 @@ import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.RelativeLayout;
 
-import com.google.android.gms.ads.Ad;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdRequest.Builder;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.InterstitialAd;
-import com.google.android.gms.ads.AdRequest.ErrorCode;
 
-public class GodotAdMob extends Godot.SingletonBase implements AdListener {
+public class GodotAdMob extends Godot.SingletonBase {
 
 	InterstitialAd interstitial;
 	AdView adView;
 	
 	private Activity activity;
+    private AdRequest.Builder adRequestBuilder;
 	
 	boolean initialized;
 	
@@ -43,51 +43,63 @@ public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 	
 	int layoutRule1;
 	int layoutRule2;
-	
-	@Override
-	public void onAdLoaded() {
-	  if (ad == interstitial) {
-		Log.d("godot", "AdMob: onAdLoaded");
-	    interstitial.show();
-	    adReceived = true;
-	  }
-	}
-
-	@Override
-	public void onAdClosed() {
-		Log.d("godot", "AdMob: onAdClosed");
-		screenDismissed = true;
-	}
-
-	@Override
-	public void onAdFailedToLoad(int errorCode) {
-		Log.w("godot", "AdMob: onAdFailedToLoad-> " + errorCode.toString());
-		failedToReceiveAd = true;
-	}
-
-	@Override
-	public void onAdLeftApplication() {
-		Log.d("godot", "AdMob: onAdLeftApplication");
-		applicationLeaved = true;
-	}
-
-	@Override
-	public void onAdOpened() {
-		Log.d("godot", "AdMob: onAdOpened");
-		presentScreen = true;
-	} 	
-	
-	public void InitializeUIThread(String p_key) {
+    
+    public void InitializeUIThread(String p_key, boolean p_test_mode, String p_test_devices) {
+        
+        adRequestBuilder = new AdRequest.Builder();
+        
+        if (p_test_mode) {
+            adRequestBuilder.addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
+            
+            if (p_test_devices != null && p_test_devices.trim() != "") {
+                for (String device : p_test_devices.split(",")) {
+                    adRequestBuilder.addTestDevice(device);
+                }
+            }
+        }
 		
 		// Create the interstitial
-		interstitial = new InterstitialAd(activity, p_key);
+		interstitial = new InterstitialAd(activity);
+        interstitial.setAdUnitId(p_key);
+        interstitial.setAdListener(new AdListener() {
+            @Override
+            public void onAdLoaded() {
+                Log.d("godot", "AdMob: onAdLoaded");
+                interstitial.show();
+                adReceived = true;
+            }
+            
+            @Override
+            public void onAdClosed() {
+                Log.d("godot", "AdMob: onAdClosed");
+                screenDismissed = true;
+            }
+            
+            @Override
+            public void onAdFailedToLoad(int errorCode) {
+                Log.w("godot", "AdMob: onAdFailedToLoad-> " + errorCode);
+                failedToReceiveAd = true;
+            }
+            
+            @Override
+            public void onAdLeftApplication() {
+                Log.d("godot", "AdMob: onAdLeftApplication");
+                applicationLeaved = true;
+            }
+            
+            @Override
+            public void onAdOpened() {
+                Log.d("godot", "AdMob: onAdOpened");
+                presentScreen = true;
+            }
+        });
+
 		
 		// Create banner
-		adView = new AdView(activity, AdSize.SMART_BANNER, p_key);
 		adView = new AdView(activity);
 		adView.setAdUnitId(p_key);
 		adView.setAdSize(AdSize.BANNER);
-	
+        
 		RelativeLayout layout = ((Godot)activity).layout;
 		RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT,
 	        LayoutParams.WRAP_CONTENT);
@@ -97,15 +109,47 @@ public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 		layout.addView(adView, layoutParams);
 		layout.invalidate();
 	
-		adView.setVisibility(View.VISIBLE);        
+        adView.setAdListener(new AdListener() {
+            @Override
+            public void onAdLoaded() {
+                Log.d("godot", "AdMob: onAdLoaded");
+                adReceived = true;
+            }
+            
+            @Override
+            public void onAdClosed() {
+                Log.d("godot", "AdMob: onAdClosed");
+                screenDismissed = true;
+            }
+            
+            @Override
+            public void onAdFailedToLoad(int errorCode) {
+                Log.w("godot", "AdMob: onAdFailedToLoad-> " + errorCode);
+                failedToReceiveAd = true;
+            }
+            
+            @Override
+            public void onAdLeftApplication() {
+                Log.d("godot", "AdMob: onAdLeftApplication");
+                applicationLeaved = true;
+            }
+            
+            @Override
+            public void onAdOpened() {
+                Log.d("godot", "AdMob: onAdOpened");
+                presentScreen = true;
+            }
+        });
+        
+		adView.setVisibility(View.VISIBLE);
 		
 		initialized = true;
 		
-	    	adReceived = false;
-	    	screenDismissed = false;
-	    	failedToReceiveAd = false;
-	    	applicationLeaved = false;
-	    	presentScreen = false;        
+        adReceived = false;
+	    screenDismissed = false;
+	    failedToReceiveAd = false;
+	    applicationLeaved = false;
+	    presentScreen = false;
 
 		Log.d("godot", "AdMob: Initialized");
 	}	
@@ -115,19 +159,19 @@ public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 		if (initialized)
 		{
 			// Create ad request
-			AdRequest adRequest = new AdRequest();
+			AdRequest adRequest = adRequestBuilder().build();
 
 			// Begin loading your interstitial
 			interstitial.loadAd(adRequest);
 
 			// Set Ad Listener to use the callbacks below
-			interstitial.setAdListener((AdListener) this);
+			//interstitial.setAdListener((AdListener) this);
 			
-		    	adReceived = false;
-		    	screenDismissed = false;
-		    	failedToReceiveAd = false;
-		    	applicationLeaved = false;
-		    	presentScreen = false; 	        
+            adReceived = false;
+		    screenDismissed = false;
+		    failedToReceiveAd = false;
+		    applicationLeaved = false;
+		    presentScreen = false;
 			
 			Log.d("godot", "AdMob: Show Interstitial");
 		}
@@ -141,11 +185,11 @@ public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 	{
 		if (initialized)
 		{
-		    AdRequest request = new AdRequest();
+		    AdRequest request = adRequestBuilder.build();
 		    adView.loadAd(request);
 		    adView.setVisibility(View.VISIBLE);
 	        
-	            Log.d("godot", "AdMob: Show Banner");
+            Log.d("godot", "AdMob: Show Banner");
 		}
 		else
 		{
@@ -221,11 +265,11 @@ public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 		layout.addView(adView, layoutParams);		
 	}
 	
-	public void Initialize(final String p_key) {
+	public void Initialize(final String p_key, boolean p_test_mode, String p_test_devices) {
 
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
-				InitializeUIThread(p_key);
+				InitializeUIThread(p_key, p_test_mode, p_test_devices);
 			}
 		});
 	}
@@ -304,7 +348,9 @@ public class GodotAdMob extends Godot.SingletonBase implements AdListener {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
 				String key = GodotLib.getGlobal("admob/api_key");
-				InitializeUIThread(key);
+                boolean test_mode = GodotLib.getGlobal("admob/test_mode");
+                String test_devices = GodotLib.getGlobal("admob/test_devices");
+				InitializeUIThread(key, test_mode, test_devices);
 			}
 		});	
 	}	
