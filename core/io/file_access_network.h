@@ -33,6 +33,7 @@
 #include "os/semaphore.h"
 #include "os/thread.h"
 #include "io/stream_peer_tcp.h"
+#include "core/map.h"
 
 class FileAccessNetwork;
 
@@ -170,11 +171,13 @@ class FileAccessCachedNetwork : public FileAccess {
 
 	FileAccess *fa_cache;
 	FileAccessNetwork *fa_remote;
-	bool cache_opened;
+	bool cache_opened;	
 	String appname;
 
 	static String cache_dir;
 	static uint64_t time_margin;
+	static Map<String, uint64_t> remote_fscache;
+	static bool use_remote_fscache;
 
 	static Error _ensure_dir(const String& base_dir, const String& p_path);
 	String _get_cached_path(const String& p_path);

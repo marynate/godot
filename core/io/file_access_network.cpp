@@ -568,6 +568,8 @@ FileAccessNetwork::~FileAccessNetwork() {
 
 String FileAccessCachedNetwork::cache_dir="";
 uint64_t FileAccessCachedNetwork::time_margin = 5; // seconds;
+Map<String, uint64_t> FileAccessCachedNetwork::remote_fscache;
+bool FileAccessCachedNetwork::use_remote_fscache=false;
 
 Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String& p_rel_path) {
 
@@ -666,7 +668,7 @@ Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 	if (cache_opened) {
 		uint64_t local_time = FileAccess::get_modified_time(cached_path);
 		FileAccessNetwork *fan_tmp = memnew(FileAccessNetwork);
-		uint64_t remote_time = fan_tmp->_get_modified_time(p_path);
+		uint64_t remote_time = use_remote_fscache? remote_fscache[p_path] : fan_tmp->_get_modified_time(p_path);
 		need_update = local_time < remote_time + time_margin;
 		print_line("  => local: " + itos(local_time) + " - remote: "  + itos(remote_time) + " => " + (need_update?"UPDATE":"CACHED"));
 		fan_tmp->close();
@@ -800,6 +802,36 @@ uint64_t FileAccessCachedNetwork::_get_modified_time(const String& p_file){
 
 void FileAccessCachedNetwork::setup() {
 
+	use_remote_fscache = false;
+
+	print_line("FileAccessCachedNetwork::setup : building cache map");
+	FileAccess::make_default<FileAccessNetwork>(FileAccess::ACCESS_RESOURCES);
+	FileAccess *f = FileAccess::open("res://.fscache", FileAccess::READ);
+	if (f) {
+		String last_dir = "";
+		while(!f->eof_reached()) {
+			String l = f->get_line().strip_edges();
+			if (l==String())
+				continue;
+
+			if (l.begins_with("::")) {
+				Vector<String> split = l.split("::");
+				ERR_CONTINUE( split.size() != 3);
+				last_dir = split[1];
+			} else {
+				Vector<String> split = l.split("::");
+				ERR_CONTINUE( split.size() != 4);
+				String file_path = (last_dir=="res://")? (last_dir+split[0]) : (last_dir+"/"+split[0]);
+				uint64_t modification_time=split[2].to_int64();
+				remote_fscache.insert(file_path, modification_time);
+				print_line(" adding: " + file_path + ": " + itos(modification_time));
+			}
+		}
+		f->close();
+		memdelete(f);
+
+		use_remote_fscache = remote_fscache.size()>0;
+	}
 }
 
 FileAccessCachedNetwork::FileAccessCachedNetwork() {
