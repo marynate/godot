@@ -566,7 +566,7 @@ FileAccessNetwork::~FileAccessNetwork() {
 
 }
 
-String FileAccessCachedNetwork::cache_dir;
+String FileAccessCachedNetwork::cache_dir="";
 uint64_t FileAccessCachedNetwork::time_margin = 5; // seconds;
 
 Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String& p_rel_path) {
@@ -574,7 +574,7 @@ Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String&
 	if (p_rel_path == "")
 		return OK;
 
-	DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+	DirAccess *da = DirAccess::create_for_path(base_dir);
 	String dir = DirAccess::normalize_path(p_rel_path);
 
 	if (dir.length()<1)
@@ -605,17 +605,37 @@ Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String&
 }
 
 String FileAccessCachedNetwork::_get_cached_path(const String& p_path) {
+	String cached_path = p_path;
+	print_line("OS::get_singleton()->get_data_dir() is: " + OS::get_singleton()->get_data_dir());
+	if (cache_dir=="") {
+		String appname = Globals::get_singleton()->get("application/name");
+		if (appname == "") appname = "noname";
 
-	if (p_path.begins_with("res://")) {
-		_ensure_dir(cache_dir, p_path.get_base_dir().replace("res://",""));
-		return p_path.replace_first("res://", cache_dir);
+		String data_path = OS::get_singleton()->get_data_dir();
+
+		if (data_path=="") {
+			data_path = ".";
+		} else {
+			String base = data_path.get_base_dir();
+			String data_dir = data_path.replace(base,"").replace("\\","/");
+			_ensure_dir(base, data_dir); //  make sure data_dir is created for OS might haven not been initialized at this point
+		}
+		cache_dir = data_path + "/rfscache/" + appname + "/";
+		_ensure_dir(data_path, "/rfscache/" + appname + "/");
 	}
-	return p_path;
+
+	if (cached_path.begins_with("res://")) {
+		_ensure_dir(cache_dir, cached_path.get_base_dir().replace("res://",""));
+		return cached_path.replace_first("res://", cache_dir);
+	}
+
+	print_line("_get_cached_path: " + p_path + " => " + cached_path);
+	return cached_path;
 }
 
 Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 
-	//print_line("[FileAccessCachedNetwork] open:" + p_path);
+	print_line("[FileAccessCachedNetwork] open:" + p_path);
 	Error err_remote = fa_remote->_open(p_path, p_mode_flags);
 	String cached_path = _get_cached_path(p_path);
 	bool is_cached = false;
@@ -631,7 +651,7 @@ Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 		return OK;
 
 	if (/*err_remote!=OK*/err_remote == ERR_FILE_NOT_FOUND && cache_opened) {
-		//print_line("  => File not found in remote, deleting local cache");
+		print_line("  => File not found in remote, deleting local cache");
 		fa_cache->close();
 		cache_opened=false;
 		DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
@@ -648,13 +668,13 @@ Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 		FileAccessNetwork *fan_tmp = memnew(FileAccessNetwork);
 		uint64_t remote_time = fan_tmp->_get_modified_time(p_path);
 		need_update = local_time < remote_time + time_margin;
-		//print_line("  => local: " + itos(local_time) + " - remote: "  + itos(remote_time) + " => " + (need_update?"UPDATE":"CACHED"));
+		print_line("  => local: " + itos(local_time) + " - remote: "  + itos(remote_time) + " => " + (need_update?"UPDATE":"CACHED"));
 		fan_tmp->close();
 		memdelete(fan_tmp);
 	}
 
 	if ( !cache_opened || (cache_opened && need_update) ) {
-		//print_line("  => Update from Remot Copy");
+		print_line("  => Update from Remot Copy");
 		Vector<uint8_t> buf;
 		buf.resize(fa_remote->get_len());
 		fa_remote->get_buffer(buf.ptr(),fa_remote->get_len());
@@ -780,20 +800,6 @@ uint64_t FileAccessCachedNetwork::_get_modified_time(const String& p_file){
 
 void FileAccessCachedNetwork::setup() {
 
-	String appname = Globals::get_singleton()->get("application/name");
-	if (appname == "")
-		appname = "noname";
-
-	String data_path = OS::get_singleton()->get_data_dir();
-	if (data_path=="") {
-		data_path = ".";
-	} else {
-		String base = data_path.get_base_dir();
-		String data_dir = data_path.replace(base,"").replace("\\","/");
-		_ensure_dir(base, data_dir); //  make sure data_dir is created for OS might haven not been initialized at this point
-	}
-	cache_dir = data_path + "/rfscache/" + appname + "/";
-	_ensure_dir(data_path, "/rfscache/" + appname + "/");
 }
 
 FileAccessCachedNetwork::FileAccessCachedNetwork() {
