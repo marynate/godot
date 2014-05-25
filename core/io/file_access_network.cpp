@@ -567,33 +567,31 @@ FileAccessNetwork::~FileAccessNetwork() {
 }
 
 String FileAccessCachedNetwork::cache_dir;
+uint64_t FileAccessCachedNetwork::time_margin = 5; // seconds;
 
-Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String& p_path) {
-	print_line("_ensure_dir:" + base_dir + ", " + p_path);
+Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String& p_rel_path) {
+
+	if (p_rel_path == "")
+		return OK;
+
 	DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
-	String dir = DirAccess::normalize_path(p_path);
-	print_line("normalized p_path: " + dir);
+	String dir = DirAccess::normalize_path(p_rel_path);
 
 	if (dir.length()<1)
-		return OK;
-	if (dir.find("/")==-1)
 		return OK;
 
 	// expected format "foo/bar/"
 	if (dir[dir.length()-1]!='/')
-		dir = dir.left(dir.find_last("/")) + "/";
+		dir = dir + "/";
 	if (dir[0]=='/')
 		dir = dir.right(1);
 
-	print_line("dir only is: " + dir);
 	da->change_dir(base_dir);
 	int pos = 0;
 	while (pos<dir.length()) {
 		int n = dir.find("/", pos);
-		print_line("pos:n = " + itos(pos) + ", " + itos(n));
 		if (n==-1) break;
 		String current = dir.substr(pos, n-pos);
-		print_line(" making dir:" + current);
 		Error err = da->make_dir(current);
 		if (err!=OK && err!= ERR_ALREADY_EXISTS) {
 			ERR_FAIL_V(err);
@@ -606,11 +604,10 @@ Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String&
 	return OK;
 }
 
-String FileAccessCachedNetwork::_get_cache_path(const String& p_path) {
-	print_line("_get_cache_path: " + p_path);
+String FileAccessCachedNetwork::_get_cached_path(const String& p_path) {
+
 	if (p_path.begins_with("res://")) {
-		print_line("_get_cache_path: => " +  p_path.replace_first("res://", cache_dir));
-		_ensure_dir(cache_dir, p_path.replace("res://",""));
+		_ensure_dir(cache_dir, p_path.get_base_dir().replace("res://",""));
 		return p_path.replace_first("res://", cache_dir);
 	}
 	return p_path;
@@ -618,195 +615,197 @@ String FileAccessCachedNetwork::_get_cache_path(const String& p_path) {
 
 Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 
-	Error err_net = fan->_open(p_path, p_mode_flags);
-	String cached_path = _get_cache_path(p_path);
+	//print_line("[FileAccessCachedNetwork] open:" + p_path);
+	Error err_remote = fa_remote->_open(p_path, p_mode_flags);
+	String cached_path = _get_cached_path(p_path);
 	bool is_cached = false;
 
 	Error err_cache;
-	fa = FileAccess::open(cached_path, p_mode_flags, &err_cache);
-	cache_opened = err_cache==OK && fa->file_exists(cached_path);
+	fa_cache = FileAccess::open(cached_path, p_mode_flags, &err_cache);
+	cache_opened = err_cache==OK && fa_cache->file_exists(cached_path);
 
-	if (err_net!=OK) {
-		if (cache_opened)
-			return OK;
-		else
-			return err_net;
+	if (err_remote!=OK && !cache_opened)
+		return err_remote;
+
+	if (err_remote!=OK && err_remote!=ERR_FILE_NOT_FOUND && cache_opened)
+		return OK;
+
+	if (/*err_remote!=OK*/err_remote == ERR_FILE_NOT_FOUND && cache_opened) {
+		//print_line("  => File not found in remote, deleting local cache");
+		fa_cache->close();
+		cache_opened=false;
+		DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+		da->remove(cached_path);
+		memdelete(da);
+
+		return err_remote;
 	}
 
-	print_line("err is ok! if cache_opened?" + cache_opened?"true":"false");
+
 	bool need_update = false;
 	if (cache_opened) {
 		uint64_t local_time = FileAccess::get_modified_time(cached_path);
-		print_line("cached mod time is:" + itos(local_time));
 		FileAccessNetwork *fan_tmp = memnew(FileAccessNetwork);
 		uint64_t remote_time = fan_tmp->_get_modified_time(p_path);
-		print_line("remote mod time is:" + itos(remote_time));
-		need_update = local_time < remote_time;
+		need_update = local_time < remote_time + time_margin;
+		//print_line("  => local: " + itos(local_time) + " - remote: "  + itos(remote_time) + " => " + (need_update?"UPDATE":"CACHED"));
 		fan_tmp->close();
 		memdelete(fan_tmp);
 	}
 
 	if ( !cache_opened || (cache_opened && need_update) ) {
-		//copy
-		print_line("try copy;");
+		//print_line("  => Update from Remot Copy");
 		Vector<uint8_t> buf;
-		buf.resize(get_len());
-		fan->get_buffer(buf.ptr(),get_len());
+		buf.resize(fa_remote->get_len());
+		fa_remote->get_buffer(buf.ptr(),fa_remote->get_len());
 
 		if (cache_opened)
-			fa->close();
+			fa_cache->close();
 
-		print_line("get_buffer done!");
 		Error err;
 		FileAccess *write = FileAccess::open(cached_path, FileAccess::WRITE, &err);
-		if (err!=OK) { // can't copy, use network
+		if (err!=OK) { // can't copy, use remote
 			cache_opened = false;
 			return OK;
 		} else {
-			print_line("Write_Opened");
 			write->store_buffer(buf.ptr(),buf.size());
-			print_line("Stored");
 			write->close();
 			memdelete(write);
 
-			fa = FileAccess::open(cached_path, p_mode_flags, &err);
+			fa_cache = FileAccess::open(cached_path, p_mode_flags, &err); // reopen with requested flags
 			cache_opened = (err==OK);
 		}
 	}
 
 	if (cache_opened) {
-		fan->close();
+		fa_remote->close();
 		return OK;
 	}
 
-	return err_net;
+	return err_remote;
 }
-
 
 void FileAccessCachedNetwork::close(){
 
 	if (cache_opened)
-		fa->close();
+		fa_cache->close();
 	else
-		fan->close();
-
+		fa_remote->close();
 }
+
 bool FileAccessCachedNetwork::is_open() const{
+
 	if (cache_opened)
 		return true;
-	return fan->is_open();
+	return fa_remote->is_open();
 }
 
 void FileAccessCachedNetwork::seek(size_t p_position){
 
 	if (cache_opened)
-		return fa->seek(p_position);
-	return fan->seek(p_position);
+		return fa_cache->seek(p_position);
+	return fa_remote->seek(p_position);
 }
 
 void FileAccessCachedNetwork::seek_end(int64_t p_position){
 
 	if (cache_opened)
-		return fa->seek_end(p_position);
-	return fan->seek_end(p_position);
-
+		return fa_cache->seek_end(p_position);
+	return fa_remote->seek_end(p_position);
 }
-
 
 size_t FileAccessCachedNetwork::get_pos() const{
 
 	if (cache_opened)
-		return fa->get_pos();
-	return fan->get_pos();
+		return fa_cache->get_pos();
+	return fa_remote->get_pos();
 }
+
 size_t FileAccessCachedNetwork::get_len() const{
 
 	if (cache_opened)
-		return fa->get_len();
-	return fan->get_len();
+		return fa_cache->get_len();
+	return fa_remote->get_len();
 }
 
 bool FileAccessCachedNetwork::eof_reached() const{
 
 	if (cache_opened)
-		return fa->eof_reached();
-	return fan->eof_reached();
+		return fa_cache->eof_reached();
+	return fa_remote->eof_reached();
 }
 
 uint8_t FileAccessCachedNetwork::get_8() const{
 
 	if (cache_opened)
-		return fa->get_8();
-	return fan->get_8();
-
+		return fa_cache->get_8();
+	return fa_remote->get_8();
 }
 
 int FileAccessCachedNetwork::get_buffer(uint8_t *p_dst, int p_length) const{
 
 	if (cache_opened)
-		return fa->get_buffer(p_dst, p_length);
-	return fan->get_buffer(p_dst, p_length);
-
+		return fa_cache->get_buffer(p_dst, p_length);
+	return fa_remote->get_buffer(p_dst, p_length);
 }
 
 Error FileAccessCachedNetwork::get_error() const{
 
 	if (cache_opened)
-		return fa->get_error();
-	return fan->get_error();
+		return fa_cache->get_error();
+	return fa_remote->get_error();
 }
 
 void FileAccessCachedNetwork::store_8(uint8_t p_dest) {
 
 	if (cache_opened)
-		return fa->store_8(p_dest);
-	return fan->store_8(p_dest);
+		return fa_cache->store_8(p_dest);
+	return fa_remote->store_8(p_dest);
 }
 
 bool FileAccessCachedNetwork::file_exists(const String& p_path){
 
 	if (cache_opened)
-		return fa->file_exists(_get_cache_path(p_path));
-	return fan->file_exists(p_path);
+		return fa_cache->file_exists(_get_cached_path(p_path));
+	return fa_remote->file_exists(p_path);
 
 }
 
 uint64_t FileAccessCachedNetwork::_get_modified_time(const String& p_file){
 
 	if (cache_opened)
-		return FileAccess::get_modified_time(_get_cache_path(p_file));
-	return fan->_get_modified_time(p_file);
-
+		return FileAccess::get_modified_time(_get_cached_path(p_file));
+	return fa_remote->_get_modified_time(p_file);
 }
 
-
 void FileAccessCachedNetwork::setup() {
-	// should be called after Globals setuped
+
 	String appname = Globals::get_singleton()->get("application/name");
 	if (appname == "")
 		appname = "noname";
-	print_line("appname is " + appname);
-	print_line("OS::get_singleton()->get_data_dir() is " + OS::get_singleton()->get_data_dir());
+
 	String data_path = OS::get_singleton()->get_data_dir();
-	if (data_path=="")
+	if (data_path=="") {
 		data_path = ".";
+	} else {
+		String base = data_path.get_base_dir();
+		String data_dir = data_path.replace(base,"").replace("\\","/");
+		_ensure_dir(base,data_dir);
+	}
 	cache_dir = data_path + "/rfscache/" + appname + "/";
 	_ensure_dir(data_path, "/rfscache/" + appname + "/");
-	print_line("cache_dir is " + cache_dir);
-
-	//FileAccess::make_default<FileAccessCachedNetwork>(FileAccess::ACCESS_RESOURCES);
 }
 
 FileAccessCachedNetwork::FileAccessCachedNetwork() {
 
 	cache_opened = false;
-	fan = memnew(FileAccessNetwork);
+	fa_remote = memnew(FileAccessNetwork);
 }
 
 FileAccessCachedNetwork::~FileAccessCachedNetwork() {
-	if (fa)
-		memdelete(fa);
-	if (fan)
-		memdelete(fan);
+	if (fa_cache)
+		memdelete(fa_cache);
+	if (fa_remote)
+		memdelete(fa_remote);
 }
 

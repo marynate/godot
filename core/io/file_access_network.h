@@ -168,17 +168,19 @@ public:
 
 class FileAccessCachedNetwork : public FileAccess {
 
-	FileAccess *fa;
-	FileAccessNetwork *fan;
+	FileAccess *fa_cache;
+	FileAccessNetwork *fa_remote;
 	bool cache_opened;
 	String appname;
+
 	static String cache_dir;
+	static uint64_t time_margin;
 
 	static Error _ensure_dir(const String& base_dir, const String& p_path);
-	String _get_cache_path(const String& p_path);
-
+	String _get_cached_path(const String& p_path);
 
 public:
+
 	virtual Error _open(const String& p_path, int p_mode_flags); ///< open a file
 	virtual void close(); ///< close a file
 	virtual bool is_open() const; ///< true when file is open
