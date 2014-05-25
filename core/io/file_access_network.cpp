@@ -790,7 +790,7 @@ void FileAccessCachedNetwork::setup() {
 	} else {
 		String base = data_path.get_base_dir();
 		String data_dir = data_path.replace(base,"").replace("\\","/");
-		_ensure_dir(base,data_dir);
+		_ensure_dir(base, data_dir); //  make sure data_dir is created for OS might haven not been initialized at this point
 	}
 	cache_dir = data_path + "/rfscache/" + appname + "/";
 	_ensure_dir(data_path, "/rfscache/" + appname + "/");
