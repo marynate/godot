@@ -183,6 +183,10 @@ class FileAccessCachedNetwork : public FileAccess {
 	static Error _ensure_dir(const String& base_dir, const String& p_path);
 	static String _get_cached_path(const String& p_path);
 
+	_FORCE_INLINE_ static bool _is_ready() {
+		return cache_dir != String() && cache_dir != "";
+	}
+
 public:
 
 	virtual Error _open(const String& p_path, int p_mode_flags); ///< open a file

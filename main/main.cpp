@@ -559,7 +559,7 @@ Error Main::setup(const char *execpath,int argc, char *argv[],bool p_second_phas
 	}
 
 	if (remotefs!="") { // switch to FileAccessCachedNetwork only after globals been setuped
-		FileAccessCachedNetwork::setup();
+		FileAccess::make_default<FileAccessCachedNetwork>(FileAccess::ACCESS_RESOURCES);
 	}
 
 	if (editor) {

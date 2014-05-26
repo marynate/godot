@@ -609,6 +609,9 @@ Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String&
 
 String FileAccessCachedNetwork::_get_cached_path(const String& p_path) {
 
+	if (!_is_ready())
+		return p_path;
+
 	String cached_path = p_path;
 	print_line("OS::get_singleton()->get_data_dir() is: " + OS::get_singleton()->get_data_dir());
 
@@ -622,6 +625,9 @@ String FileAccessCachedNetwork::_get_cached_path(const String& p_path) {
 }
 
 Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
+
+	if (!_is_ready())
+		setup();
 
 	print_line("[FileAccessCachedNetwork] opening " + p_path);
 
@@ -796,6 +802,10 @@ uint64_t FileAccessCachedNetwork::_get_modified_time(const String& p_file){
 
 Error FileAccessCachedNetwork::cache(const String& p_path) {
 
+	if (!_is_ready()) {
+		return FAILED;
+	}
+
 	FileAccessNetwork *fan_tmp = memnew(FileAccessNetwork);
 	Error err = fan_tmp->_open(p_path, FileAccess::READ);
 	if (err!=OK) {
@@ -820,6 +830,10 @@ Error FileAccessCachedNetwork::cache(const String& p_path) {
 
 Error FileAccessCachedNetwork::clear_cache(const String& p_appname, bool p_keep_app_dir) {
 
+	if (!_is_ready()) {
+		return FAILED;
+	}
+
 	DirAccess *da = DirAccess::create_for_path(cache_dir);
 	Error err = da->erase_contents_recursive();
 	if (err==OK && !p_keep_app_dir) {
@@ -834,17 +848,15 @@ void FileAccessCachedNetwork::setup() {
 
 	use_remote_fscache = false;
 
-	// Cache files' modified time from remote .fscache
-	FileAccess::make_default<FileAccessNetwork>(FileAccess::ACCESS_RESOURCES);
-
 	// It's necessay to trigger .fscache update in remote editor manually to make changes reflected here
 	// (by press "reload" button in FileSystem tab)
 	// todo: update .fscache each time scene get saved
-	FileAccess *f = FileAccess::open("res://.fscache", FileAccess::READ);
-	if (f) {
+	FileAccessNetwork *fan = memnew(FileAccessNetwork);
+	Error err = fan->_open("res://.fscache", FileAccess::READ);
+	if (err==OK) {
 		String last_dir = "";
-		while(!f->eof_reached()) {
-			String l = f->get_line().strip_edges();
+		while(!fan->eof_reached()) {
+			String l = fan->get_line().strip_edges();
 			if (l==String())
 				continue;
 
@@ -861,47 +873,37 @@ void FileAccessCachedNetwork::setup() {
 				print_line(" adding: " + file_path + ": " + itos(modification_time));
 			}
 		}
-		f->close();
-		memdelete(f);
+		fan->close();
+		memdelete(fan);
 
 		use_remote_fscache = remote_fscache.size()>0;
 	}	
 
-	FileAccess::make_default<FileAccessCachedNetwork>(FileAccess::ACCESS_RESOURCES);
+	String appname = Globals::get_singleton()->get("application/name");
+	if (appname == "") appname = "noname";
 
-	request_reset = true;
+	String data_path = OS::get_singleton()->get_data_dir();
+
+	if (data_path=="") {
+		data_path = ".";
+	} else {
+		String base = data_path.get_base_dir();
+		String data_dir = data_path.replace(base,"").replace("\\","/");
+		print_line("_ensure_dir with base: " + base + ", data_dir: " + data_dir);
+		_ensure_dir(base, data_dir); //  make sure data_dir is created for OS might haven not been initialized at this point
+	}
+	cache_dir = data_path + "/rfscache/" + appname + "/";
+	_ensure_dir(data_path, "/rfscache/" + appname + "/");
+
+	// cache config files for offline playback
+	cache("res://engine.cfg");
+	cache("res://override.cfg");
 }
 
 FileAccessCachedNetwork::FileAccessCachedNetwork() {
 
 	cache_opened = false;
 	fa_remote = memnew(FileAccessNetwork);
-
-	if (request_reset || cache_dir=="") {
-
-		String appname = Globals::get_singleton()->get("application/name");
-		if (appname == "") appname = "noname";
-
-		String data_path = OS::get_singleton()->get_data_dir();
-
-		if (data_path=="") {
-			data_path = ".";
-		} else {
-			String base = data_path.get_base_dir();
-			String data_dir = data_path.replace(base,"").replace("\\","/");
-			print_line("_ensure_dir with base: " + base + ", data_dir: " + data_dir);
-			_ensure_dir(base, data_dir); //  make sure data_dir is created for OS might haven not been initialized at this point
-		}
-		cache_dir = data_path + "/rfscache/" + appname + "/";
-		_ensure_dir(data_path, "/rfscache/" + appname + "/");
-
-		// cache config files for offline playback
-		cache("res://engine.cfg");
-		cache("res://override.cfg");
-
-		request_reset=false;
-	}
-
 }
 
 FileAccessCachedNetwork::~FileAccessCachedNetwork() {
