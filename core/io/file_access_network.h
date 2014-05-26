@@ -178,6 +178,7 @@ class FileAccessCachedNetwork : public FileAccess {
 	static uint64_t time_margin;
 	static Map<String, uint64_t> remote_fscache;
 	static bool use_remote_fscache;
+	static bool request_reset;
 
 	static Error _ensure_dir(const String& base_dir, const String& p_path);
 	static String _get_cached_path(const String& p_path);

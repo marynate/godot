@@ -570,6 +570,7 @@ String FileAccessCachedNetwork::cache_dir="";
 uint64_t FileAccessCachedNetwork::time_margin = 5; // seconds;
 Map<String, uint64_t> FileAccessCachedNetwork::remote_fscache;
 bool FileAccessCachedNetwork::use_remote_fscache=false;
+bool FileAccessCachedNetwork::request_reset=true;
 
 Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String& p_rel_path) {
 
@@ -607,9 +608,11 @@ Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String&
 }
 
 String FileAccessCachedNetwork::_get_cached_path(const String& p_path) {
+
 	String cached_path = p_path;
 	print_line("OS::get_singleton()->get_data_dir() is: " + OS::get_singleton()->get_data_dir());
-	if (cache_dir=="") {
+	if (request_reset || cache_dir=="") {
+
 		String appname = Globals::get_singleton()->get("application/name");
 		if (appname == "") appname = "noname";
 
@@ -618,12 +621,19 @@ String FileAccessCachedNetwork::_get_cached_path(const String& p_path) {
 		if (data_path=="") {
 			data_path = ".";
 		} else {
-			String base = data_path.get_base_dir();
+			String base = data_path.get_base_dir();			
 			String data_dir = data_path.replace(base,"").replace("\\","/");
+			print_line("_ensure_dir with base: " + base + ", data_dir: " + data_dir);
 			_ensure_dir(base, data_dir); //  make sure data_dir is created for OS might haven not been initialized at this point
 		}
 		cache_dir = data_path + "/rfscache/" + appname + "/";
 		_ensure_dir(data_path, "/rfscache/" + appname + "/");
+
+		// cache config files for offline playback
+		cache("res://engine.cfg");
+		cache("res://override.cfg");
+
+		request_reset=false;
 	}
 
 	if (cached_path.begins_with("res://")) {
@@ -882,9 +892,7 @@ void FileAccessCachedNetwork::setup() {
 
 	FileAccess::make_default<FileAccessCachedNetwork>(FileAccess::ACCESS_RESOURCES);
 
-	// cache config files for offline playback
-	cache("res://engine.cfg");
-	cache("res://override.cfg");
+	request_reset = true;
 }
 
 FileAccessCachedNetwork::FileAccessCachedNetwork() {
