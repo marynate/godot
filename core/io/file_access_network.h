@@ -180,7 +180,7 @@ class FileAccessCachedNetwork : public FileAccess {
 	static bool use_remote_fscache;
 
 	static Error _ensure_dir(const String& base_dir, const String& p_path);
-	String _get_cached_path(const String& p_path);
+	static String _get_cached_path(const String& p_path);
 
 public:
 
@@ -207,6 +207,8 @@ public:
 	virtual uint64_t _get_modified_time(const String& p_file);
 
 	static void setup();
+	static Error cache(const String& p_path);
+	static Error clear_cache(const String& p_appname,  bool p_keep_app_dir=true);
 
 	FileAccessCachedNetwork();
 	~FileAccessCachedNetwork();

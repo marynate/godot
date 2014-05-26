@@ -692,7 +692,8 @@ Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 
 
 		FileAccess *write = FileAccess::open(cached_path, FileAccess::WRITE, &err);
-		if (err!=OK) { // can't copy, use remote
+		if (err!=OK) {
+			print_line("  => Can't write to cache, use remote instead");
 			cache_opened = false;
 			return OK;
 		} else {
@@ -806,6 +807,42 @@ uint64_t FileAccessCachedNetwork::_get_modified_time(const String& p_file){
 	return fa_remote->_get_modified_time(p_file);
 }
 
+Error FileAccessCachedNetwork::cache(const String& p_path) {
+
+	FileAccessNetwork *fan_tmp = memnew(FileAccessNetwork);
+	Error err = fan_tmp->_open(p_path, FileAccess::READ);
+	if (err!=OK) {
+		return err;
+	}
+
+	Vector<uint8_t> buf;
+	buf.resize(fan_tmp->get_len());
+	fan_tmp->get_buffer(buf.ptr(),buf.size());
+	fan_tmp->close();
+	memdelete(fan_tmp);
+
+	FileAccess *f = FileAccess::open(_get_cached_path(p_path), FileAccess::WRITE, &err);
+	if (!f) {
+		return err;
+	}
+	f->store_buffer(buf.ptr(),buf.size());
+	f->close();
+	memdelete(f);
+	return err;
+}
+
+Error FileAccessCachedNetwork::clear_cache(const String& p_appname, bool p_keep_app_dir) {
+
+	DirAccess *da = DirAccess::create_for_path(cache_dir);
+	Error err = da->erase_contents_recursive();
+	if (err==OK && !p_keep_app_dir) {
+		da->change_dir("..");
+		err = da->remove(p_appname);
+	}
+	memdelete(da);
+	return err;
+}
+
 void FileAccessCachedNetwork::setup() {
 
 	use_remote_fscache = false;
@@ -816,7 +853,6 @@ void FileAccessCachedNetwork::setup() {
 	// It's necessay to trigger .fscache update in remote editor manually to make changes reflected here
 	// (by press "reload" button in FileSystem tab)
 	// todo: update .fscache each time scene get saved
-	// todo: cache .cfg for offline playback
 	FileAccess *f = FileAccess::open("res://.fscache", FileAccess::READ);
 	if (f) {
 		String last_dir = "";
@@ -845,6 +881,10 @@ void FileAccessCachedNetwork::setup() {
 	}	
 
 	FileAccess::make_default<FileAccessCachedNetwork>(FileAccess::ACCESS_RESOURCES);
+
+	// cache config files for offline playback
+	cache("res://engine.cfg");
+	cache("res://override.cfg");
 }
 
 FileAccessCachedNetwork::FileAccessCachedNetwork() {
