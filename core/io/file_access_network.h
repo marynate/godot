@@ -211,7 +211,7 @@ public:
 
 	virtual uint64_t _get_modified_time(const String& p_file);
 
-	static void setup();
+	static Error setup();
 	static Error cache(const String& p_path);
 	static Error clear_cache(const String& p_appname,  bool p_keep_app_dir=true);
 

@@ -609,25 +609,28 @@ Error FileAccessCachedNetwork::_ensure_dir(const String& base_dir, const String&
 
 String FileAccessCachedNetwork::_get_cached_path(const String& p_path) {
 
-	if (!_is_ready())
-		return p_path;
+	if (!_is_ready()) {
+		Error err = setup();
+		if (err!=OK)
+			return p_path; //! possible to trigger recursive call, need test case
+	}
 
 	String cached_path = p_path;
-	print_line("OS::get_singleton()->get_data_dir() is: " + OS::get_singleton()->get_data_dir());
 
 	if (cached_path.begins_with("res://")) {
 		_ensure_dir(cache_dir, cached_path.get_base_dir().replace("res://",""));
 		return cached_path.replace_first("res://", cache_dir);
 	}
 
-	print_line("_get_cached_path: " + p_path + " => " + cached_path);
 	return cached_path;
 }
 
 Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 
-	if (!_is_ready())
-		setup();
+	if (!_is_ready()) {
+		Error err = setup();
+		ERR_FAIL_COND_V(err,err);
+	}
 
 	print_line("[FileAccessCachedNetwork] opening " + p_path);
 
@@ -808,8 +811,10 @@ Error FileAccessCachedNetwork::cache(const String& p_path) {
 
 	FileAccessNetwork *fan_tmp = memnew(FileAccessNetwork);
 	Error err = fan_tmp->_open(p_path, FileAccess::READ);
-	if (err!=OK) {
-		return err;
+	if (err==ERR_FILE_NOT_FOUND) {
+		fan_tmp->close();
+		memdelete(fan_tmp);
+		return ERR_FILE_NOT_FOUND;
 	}
 
 	Vector<uint8_t> buf;
@@ -844,7 +849,7 @@ Error FileAccessCachedNetwork::clear_cache(const String& p_appname, bool p_keep_
 	return err;
 }
 
-void FileAccessCachedNetwork::setup() {
+Error FileAccessCachedNetwork::setup() {
 
 	use_remote_fscache = false;
 
@@ -883,21 +888,29 @@ void FileAccessCachedNetwork::setup() {
 	if (appname == "") appname = "noname";
 
 	String data_path = OS::get_singleton()->get_data_dir();
-
 	if (data_path=="") {
 		data_path = ".";
 	} else {
 		String base = data_path.get_base_dir();
 		String data_dir = data_path.replace(base,"").replace("\\","/");
-		print_line("_ensure_dir with base: " + base + ", data_dir: " + data_dir);
-		_ensure_dir(base, data_dir); //  make sure data_dir is created for OS might haven not been initialized at this point
+		Error err = _ensure_dir(base, data_dir); //  make sure data_dir is created for OS might haven not been initialized at this point
+		if (err!=OK && err!=ERR_ALREADY_EXISTS) {
+			cache_dir = "";
+			return err;
+		}
 	}
 	cache_dir = data_path + "/rfscache/" + appname + "/";
-	_ensure_dir(data_path, "/rfscache/" + appname + "/");
+	err = _ensure_dir(data_path, "/rfscache/" + appname + "/");
+	if (err!=OK && err!=ERR_ALREADY_EXISTS) {
+		cache_dir = "";
+		return err;
+	}
 
 	// cache config files for offline playback
 	cache("res://engine.cfg");
 	cache("res://override.cfg");
+
+	return OK;
 }
 
 FileAccessCachedNetwork::FileAccessCachedNetwork() {
