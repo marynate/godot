@@ -637,32 +637,13 @@ String FileAccessCachedNetwork::_get_cached_path(const String& p_path) {
 
 Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 
-	print_line("[FileAccessCachedNetwork] open:" + p_path);
-	Error err_remote = fa_remote->_open(p_path, p_mode_flags);
+	print_line("[FileAccessCachedNetwork] opening " + p_path);
 	String cached_path = _get_cached_path(p_path);
 	bool is_cached = false;
 
 	Error err_cache;
 	fa_cache = FileAccess::open(cached_path, p_mode_flags, &err_cache);
 	cache_opened = err_cache==OK && fa_cache->file_exists(cached_path);
-
-	if (err_remote!=OK && !cache_opened)
-		return err_remote;
-
-	if (err_remote!=OK && err_remote!=ERR_FILE_NOT_FOUND && cache_opened)
-		return OK;
-
-	if (/*err_remote!=OK*/err_remote == ERR_FILE_NOT_FOUND && cache_opened) {
-		print_line("  => File not found in remote, deleting local cache");
-		fa_cache->close();
-		cache_opened=false;
-		DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
-		da->remove(cached_path);
-		memdelete(da);
-
-		return err_remote;
-	}
-
 
 	bool need_update = false;
 	if (cache_opened) {
@@ -675,8 +656,33 @@ Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 		memdelete(fan_tmp);
 	}
 
+	Error err;
 	if ( !cache_opened || (cache_opened && need_update) ) {
-		print_line("  => Update from Remot Copy");
+
+		print_line("  => Try updating from remote");
+		Error err_remote = fa_remote->_open(p_path, p_mode_flags);
+
+		if (err_remote!=OK && !cache_opened) {
+			print_line("  => Can't get file from remote and cache => Error: "  + (err_remote==ERR_FILE_NOT_FOUND?"ERR_FILE_NOT_FOUND":itos(err_remote)));
+			return err_remote;
+		}
+
+		if (err_remote!=OK && err_remote!=ERR_FILE_NOT_FOUND && cache_opened) {
+			print_line("  => Can't access remote copy (err:" + itos(err_remote) + "), use cached version instead! ");
+			fa_remote->close();
+			return OK;
+		}
+
+		if (/*err_remote!=OK*/err_remote == ERR_FILE_NOT_FOUND && cache_opened) {
+			print_line("  => File not found in remote, deleting local cache");
+			fa_cache->close();
+			cache_opened=false;
+			DirAccess *da = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+			da->remove(cached_path);
+			memdelete(da);
+			return ERR_FILE_NOT_FOUND;
+		}
+
 		Vector<uint8_t> buf;
 		buf.resize(fa_remote->get_len());
 		fa_remote->get_buffer(buf.ptr(),fa_remote->get_len());
@@ -684,7 +690,7 @@ Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 		if (cache_opened)
 			fa_cache->close();
 
-		Error err;
+
 		FileAccess *write = FileAccess::open(cached_path, FileAccess::WRITE, &err);
 		if (err!=OK) { // can't copy, use remote
 			cache_opened = false;
@@ -704,7 +710,7 @@ Error FileAccessCachedNetwork::_open(const String& p_path, int p_mode_flags) {
 		return OK;
 	}
 
-	return err_remote;
+	return err;
 }
 
 void FileAccessCachedNetwork::close(){
@@ -804,8 +810,13 @@ void FileAccessCachedNetwork::setup() {
 
 	use_remote_fscache = false;
 
-	print_line("FileAccessCachedNetwork::setup : building cache map");
+	// Cache files' modified time from remote .fscache
 	FileAccess::make_default<FileAccessNetwork>(FileAccess::ACCESS_RESOURCES);
+
+	// It's necessay to trigger .fscache update in remote editor manually to make changes reflected here
+	// (by press "reload" button in FileSystem tab)
+	// todo: update .fscache each time scene get saved
+	// todo: cache .cfg for offline playback
 	FileAccess *f = FileAccess::open("res://.fscache", FileAccess::READ);
 	if (f) {
 		String last_dir = "";
@@ -831,7 +842,9 @@ void FileAccessCachedNetwork::setup() {
 		memdelete(f);
 
 		use_remote_fscache = remote_fscache.size()>0;
-	}
+	}	
+
+	FileAccess::make_default<FileAccessCachedNetwork>(FileAccess::ACCESS_RESOURCES);
 }
 
 FileAccessCachedNetwork::FileAccessCachedNetwork() {
