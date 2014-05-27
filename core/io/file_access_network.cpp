@@ -900,6 +900,8 @@ Error FileAccessCachedNetwork::setup() {
 		}
 	}
 	cache_dir = data_path + "/rfscache/" + appname + "/";
+	print_line("[FileAccessCachedNetwork] data_path: " + data_path);
+	print_line("[FileAccessCachedNetwork] cache_dir: " + cache_dir);
 	err = _ensure_dir(data_path, "/rfscache/" + appname + "/");
 	if (err!=OK && err!=ERR_ALREADY_EXISTS) {
 		cache_dir = "";
