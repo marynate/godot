@@ -753,6 +753,8 @@ void EditorNode::_save_scene(String p_file) {
 		//EditorFileSystem::get_singleton()->update_file(p_file,sdata->get_type());
 		saved_version=editor_data.get_undo_redo().get_version();
 		_update_title();
+
+		EditorFileSystem::get_singleton()->scan();
 	} else {
 
 		_dialog_display_file_error(p_file,err);
