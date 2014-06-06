@@ -875,7 +875,7 @@ Error FileAccessCachedNetwork::setup() {
 				String file_path = (last_dir=="res://")? (last_dir+split[0]) : (last_dir+"/"+split[0]);
 				uint64_t modification_time=split[2].to_int64();
 				remote_fscache.insert(file_path, modification_time);
-				print_line(" adding: " + file_path + ": " + itos(modification_time));
+				//print_line(" adding: " + file_path + ": " + itos(modification_time));
 			}
 		}
 		fan->close();
@@ -908,7 +908,8 @@ Error FileAccessCachedNetwork::setup() {
 		return err;
 	}
 
-	// cache config files for offline playback
+	// cache config files for future offline playback
+	// todo: add offline playback
 	cache("res://engine.cfg");
 	cache("res://override.cfg");
 
