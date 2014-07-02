@@ -3,7 +3,7 @@
 ### Build Status
 
 master: [![Build Status](https://travis-ci.org/marynate/godot.svg?branch=master)](https://travis-ci.org/marynate/godot)
-dev:  [![Build Status](https://travis-ci.org/marynate/godot.svg?branch=dev.ci)](https://travis-ci.org/marynate/godot)
+dev:  [![Build Status](https://travis-ci.org/marynate/godot.svg?branch=dev)](https://travis-ci.org/marynate/godot)
 
 
 ### The Engine
