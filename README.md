@@ -1,5 +1,11 @@
 ![GODOT](/logo.png)
 
+### Build Status
+
+master: [![Build Status](https://travis-ci.org/marynate/godot.svg?branch=master)](https://travis-ci.org/marynate/godot)
+dev:  [![Build Status](https://travis-ci.org/marynate/godot.svg?branch=dev.ci)](https://travis-ci.org/marynate/godot)
+
+
 ### The Engine
 
 Godot is a fully featured, open source, MIT licensed, game engine. It focuses on having great tools, and a visual oriented workflow that can export to PC, Mobile and Web platforms with no hassle.
