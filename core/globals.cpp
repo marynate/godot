@@ -62,7 +62,7 @@ String Globals::localize_path(const String& p_path) const {
 
 	String path = p_path.replace("\\","/").simplify_path();
 
-	if(dir->dir_exists(path)) {
+	if (dir->dir_exists(path)) {
 
 		String cwd = dir->get_current_dir();
 		cwd = cwd.replace("\\","/");
