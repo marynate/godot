@@ -180,6 +180,7 @@ class RasterizerGLES2 : public Rasterizer {
 		bool has_screen_uv;
 		bool writes_vertex;
 		bool uses_discard;
+		bool uses_time;
 
 		Map<StringName,ShaderLanguage::Uniform> uniforms;
 		StringName first_texture;
@@ -201,6 +202,7 @@ class RasterizerGLES2 : public Rasterizer {
 			has_screen_uv=false;
 			writes_vertex=false;
 			uses_discard=false;
+			uses_time=false;
 		}
 
 
@@ -1173,6 +1175,8 @@ public:
 	virtual void texture_set_size_override(RID p_texture,int p_width, int p_height);
 	virtual void texture_set_reload_hook(RID p_texture,ObjectID p_owner,const StringName& p_function) const;
 
+	GLuint _texture_get_name(RID p_tex);
+
 	/* SHADER API */
 
 	virtual RID shader_create(VS::ShaderMode p_mode=VS::SHADER_MATERIAL);
@@ -1506,7 +1510,7 @@ public:
 
 	virtual int get_render_info(VS::RenderInfo p_info);
 
-	void set_base_framebuffer(GLuint p_id);
+	void set_base_framebuffer(GLuint p_id, Vector2 p_size = Vector2(0, 0));
 
 	virtual void flush_frame(); //not necesary in most cases
 	void set_extensions(const char *p_strings);
@@ -1518,6 +1522,7 @@ public:
 
 	virtual bool has_feature(VS::Features p_feature) const;
 
+	static RasterizerGLES2* get_singleton();
 
 	RasterizerGLES2(bool p_compress_arrays=false,bool p_keep_ram_copy=true,bool p_default_fragment_lighting=true,bool p_use_reload_hooks=false);
 	virtual ~RasterizerGLES2();
