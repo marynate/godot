@@ -61,10 +61,18 @@
 #include "o_str.h"
 
 #if !defined(OPENSSL_IMPLEMENTS_strncasecmp) && \
-    !defined(OPENSSL_SYSNAME_WIN32) && \
-    !defined(NETWARE_CLIB)
-# include <strings.h>
+	!defined(OPENSSL_SYSNAME_WIN32) && \
+	!defined(NETWARE_CLIB)
+
+	#ifdef _WIN32
+		#include <string.h>
+	#else
+		#include <strings.h>
+	#endif
 #endif
+
+
+
 
 int OPENSSL_strncasecmp(const char *str1, const char *str2, size_t n)
 	{
