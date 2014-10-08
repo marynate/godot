@@ -65,7 +65,7 @@ public:
 class SpatialEditorViewport : public Control {
 
 	OBJ_TYPE( SpatialEditorViewport, Control );
-
+friend class SpatialEditor;
 	enum {
 
 		VIEW_TOP,
@@ -78,7 +78,8 @@ class SpatialEditorViewport : public Control {
 		VIEW_ALIGN_SELECTION_WITH_VIEW,
 		VIEW_PERSPECTIVE,
 		VIEW_ENVIRONMENT,
-		VIEW_ORTHOGONAL
+		VIEW_ORTHOGONAL,
+		VIEW_AUDIO_LISTENER,
 	};
 	enum {
 		GIZMO_BASE_LAYER=25
@@ -222,6 +223,7 @@ public:
 	void set_can_preview(Camera* p_preview);
 	void set_state(const Dictionary& p_state);
 	Dictionary get_state() const;
+	void reset();
 
 
 
@@ -348,6 +350,7 @@ private:
 		MENU_VIEW_DISPLAY_NORMAL,
 		MENU_VIEW_DISPLAY_WIREFRAME,
 		MENU_VIEW_DISPLAY_OVERDRAW,
+		MENU_VIEW_DISPLAY_SHADELESS,
 		MENU_VIEW_ORIGIN,
 		MENU_VIEW_GRID,
 		MENU_VIEW_CAMERA_SETTINGS,
@@ -476,6 +479,7 @@ public:
 
 	Camera *get_camera() { return NULL; }
 	void edit(Spatial *p_spatial);
+	void clear();
 	SpatialEditor(EditorNode *p_editor);
 	~SpatialEditor();
 };
@@ -501,6 +505,7 @@ public:
 
 	virtual Dictionary get_state() const;
 	virtual void set_state(const Dictionary& p_state);
+	virtual void clear() { spatial_editor->clear(); }
 
 
 	SpatialEditorPlugin(EditorNode *p_node);

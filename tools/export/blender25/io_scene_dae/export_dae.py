@@ -315,15 +315,16 @@ class DaeExporter:
 		return matid
 
 
-	def export_mesh(self,node,armature=None):
+	def export_mesh(self,node,armature=None,shapename=None):
 
-		if (len(node.modifiers) and self.config["use_mesh_modifiers"]):
+		mesh = node.data
+		if (node.data in self.mesh_cache) and shapename==None:
+			return self.mesh_cache[mesh]
+
+		if (len(node.modifiers) and self.config["use_mesh_modifiers"]) or shapename!=None:
 			mesh=node.to_mesh(self.scene,True,"RENDER") #is this allright?
 		else:
 			mesh=node.data
-
-		if (mesh in self.mesh_cache):
-			return self.mesh_cache[mesh]
 
 		mesh.update(calc_tessface=True)
 		vertices=[]
@@ -427,9 +428,13 @@ class DaeExporter:
 
 				indices.append(idx)
 
-		meshid = self.new_id("mesh")
+		if shapename != None:
+			meshid = self.new_id("mesh_"+shapename)
+			self.writel(S_GEOM,1,'<geometry id="'+meshid+'" name="'+mesh.name+'_'+shapename+'">')
+		else:
+			meshid = self.new_id("mesh")
+			self.writel(S_GEOM,1,'<geometry id="'+meshid+'" name="'+mesh.name+'">')
 
-		self.writel(S_GEOM,1,'<geometry id="'+meshid+'" name="'+mesh.name+'">')
 		self.writel(S_GEOM,2,'<mesh>')
 
 
@@ -471,7 +476,12 @@ class DaeExporter:
 			self.writel(S_GEOM,3,'<source id="'+meshid+'-texcoord-'+str(uvi)+'">')
 			float_values=""
 			for v in vertices:
-				float_values+=" "+str(v.uv[uvi].x)+" "+str(v.uv[uvi].y)
+				try:
+					float_values+=" "+str(v.uv[uvi].x)+" "+str(v.uv[uvi].y)
+				except:
+					# I don't understand this weird multi-uv-layer API, but with this it seems to works
+					float_values+=" 0 0 "
+
 			self.writel(S_GEOM,4,'<float_array id="'+meshid+'-texcoord-'+str(uvi)+'-array" count="'+str(len(vertices)*2)+'">'+float_values+'</float_array>')
 			self.writel(S_GEOM,4,'<technique_common>')
 			self.writel(S_GEOM,4,'<accessor source="#'+meshid+'-texcoord-'+str(uvi)+'-array" count="'+str(len(vertices))+'" stride="2">')
@@ -519,7 +529,7 @@ class DaeExporter:
 		meshdata={}
 		meshdata["id"]=meshid
 		meshdata["material_assign"]=mat_assign
-		self.mesh_cache[mesh]=meshdata
+		self.mesh_cache[node.data]=meshdata
 
 
 		# Export armature data (if armature exists)
@@ -604,7 +614,7 @@ class DaeExporter:
 		return meshdata
 
 
-	def export_mesh_node(self,node,il):
+	def export_mesh_node(self,node,il,shapename=None):
 
 		if (node.data==None):
 			return
@@ -614,8 +624,7 @@ class DaeExporter:
 			if (node.parent.type=="ARMATURE"):
 				armature=node.parent
 
-
-		meshdata = self.export_mesh(node,armature)
+		meshdata = self.export_mesh(node,armature,shapename)
 
 		if (armature==None):
 			self.writel(S_NODES,il,'<instance_geometry url="#'+meshdata["id"]+'">')
@@ -903,18 +912,21 @@ class DaeExporter:
 
 
 
-	def export_node(self,node,il):
-
+	def export_node(self,node,il,shapename=None):
 		if (not self.is_node_valid(node)):
 			return
+		bpy.context.scene.objects.active = node
 
-		self.writel(S_NODES,il,'<node id="'+self.validate_id(node.name)+'" name="'+node.name+'" type="NODE">')
+		if shapename != None:
+			self.writel(S_NODES,il,'<node id="'+self.validate_id(node.name + '_' + shapename)+'" name="'+node.name+'_'+shapename+'" type="NODE">')
+		else:
+			self.writel(S_NODES,il,'<node id="'+self.validate_id(node.name)+'" name="'+node.name+'" type="NODE">')
 		il+=1
 
 		self.writel(S_NODES,il,'<matrix sid="transform">'+strmtx(node.matrix_local)+'</matrix>')
 		print("NODE TYPE: "+node.type+" NAME: "+node.name)
 		if (node.type=="MESH"):
-			self.export_mesh_node(node,il)
+			self.export_mesh_node(node,il,shapename)
 		elif (node.type=="CURVE"):
 			self.export_curve_node(node,il)
 		elif (node.type=="ARMATURE"):
@@ -925,8 +937,22 @@ class DaeExporter:
 			self.export_lamp_node(node,il)
 
 		self.valid_nodes.append(node)
-		for x in node.children:
-			self.export_node(x,il)
+		if shapename==None:
+			for x in node.children:
+				self.export_node(x,il)
+			if node.type=="MESH" and self.config["export_shapekeys"]:
+				for k in range(0,len(node.data.shape_keys.key_blocks)):
+					shape = node.data.shape_keys.key_blocks[k]
+					oldval = shape.value
+					shape.value = 1.0
+					node.active_shape_key_index = k
+					p = node.data
+					v = node.to_mesh(bpy.context.scene, True, "RENDER")
+					node.data = v
+					self.export_node(node,il,shape.name)
+					node.data = p
+					node.data.update()
+					shape.value = oldval
 		il-=1
 		self.writel(S_NODES,il,'</node>')
 
@@ -1039,6 +1065,8 @@ class DaeExporter:
 		#Collada starts from 0, blender usually from 1
 		#The last frame must be included also
 
+		frame_orig = self.scene.frame_current
+
 		frame_len = 1.0 / self.scene.render.fps
 		frame_total = end - start + 1
 		frame_sub = 0
@@ -1094,11 +1122,19 @@ class DaeExporter:
 						mtx = posebone.matrix.copy()
 						if (bone.parent):
 							parent_posebone=node.pose.bones[bone.parent.name]
-							mtx = parent_posebone.matrix.inverted() * mtx
+							parent_invisible=False
+
+							for i in range(3):
+								if (parent_posebone.scale[i]==0.0):
+								    parent_invisible=True
+
+							if (not parent_invisible):
+								mtx = parent_posebone.matrix.inverted() * mtx
 
 
 						xform_cache[bone_name].append( (key,mtx) )
 
+		self.scene.frame_set(frame_orig)
 
 		#export animation xml
 		for nid in xform_cache:
@@ -1114,10 +1150,19 @@ class DaeExporter:
 
 		if (self.config["use_anim_action_all"] and len(self.skeletons)):
 
+			cached_actions = {}
+
+			for s in self.skeletons:
+				if s.animation_data and s.animation_data.action:
+					cached_actions[s] = s.animation_data.action.name
+
+
 			self.writel(S_ANIM_CLIPS,0,'<library_animation_clips>')
 
 			for x in bpy.data.actions[:]:
-				if x in self.action_constraints:
+				if x.users==0 or x in self.action_constraints:
+					continue
+				if (self.config["use_anim_skip_noexp"] and x.name.endswith("-noexp")):
 					continue
 
 				bones=[]
@@ -1158,6 +1203,11 @@ class DaeExporter:
 
 			self.writel(S_ANIM_CLIPS,0,'</library_animation_clips>')
 
+			for s in self.skeletons:
+				if s in cached_actions:
+					s.animation_data.action = bpy.data.actions[cached_actions[s]]
+				else:
+					s.animation_data.action = None
 		else:
 			self.export_animation(self.scene.frame_start,self.scene.frame_end)
 

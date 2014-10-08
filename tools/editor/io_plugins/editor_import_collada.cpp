@@ -564,6 +564,7 @@ Error ColladaImport::_create_mesh_surfaces(Ref<Mesh>& p_mesh,const Map<String,Co
 	bool local_xform_mirror=p_local_xform.basis.determinant() < 0;
 
 	if (p_morph_data) {
+
 		//add morphie target
 		ERR_FAIL_COND_V( !p_morph_data->targets.has("MORPH_TARGET"), ERR_INVALID_DATA );
 		String mt = p_morph_data->targets["MORPH_TARGET"];
@@ -1478,8 +1479,11 @@ Error ColladaImport::_create_resources(Collada::Node *p_node) {
 			Transform apply_xform;
 			Vector<int> bone_remap;
 
+			print_line("mesh: "+String(mi->get_name()));
+
 			if (ng->controller) {
 
+				print_line("has controller");
 				if (collada.state.skin_controller_data_map.has(ng->source)) {
 
 
@@ -1524,13 +1528,20 @@ Error ColladaImport::_create_resources(Collada::Node *p_node) {
 					for(int i=0;i<bone_remap.size();i++) {
 
 						String str = joint_src->sarray[i];
+						if (!bone_remap_map.has(str)) {
+							print_line("bone not found for remap: "+str);
+							print_line("in skeleton: "+skname);
+						}
 						ERR_FAIL_COND_V( !bone_remap_map.has(str), ERR_INVALID_DATA );
 						bone_remap[i]=bone_remap_map[str];
 					}
 				} else if (collada.state.morph_controller_data_map.has(ng->source)) {
+					print_line("is morph "+ng->source);
 					//it's a morph!!
-					morph = &collada.state.morph_controller_data_map[meshid];
+					morph = &collada.state.morph_controller_data_map[ng->source];
 					meshid=morph->mesh;
+					printf("KKmorph: %p\n",morph);
+					print_line("morph mshid: "+meshid);
 				} else {
 					ERR_EXPLAIN("Controller Instance Source '"+ng->source+"' is neither skin or morph!");
 					ERR_FAIL_V( ERR_INVALID_DATA );
@@ -1818,9 +1829,9 @@ void ColladaImport::create_animation(int p_clip, bool p_make_tracks_in_all_bones
 	if (p_clip>=0 && collada.state.animation_clips[p_clip].end)
 		anim_length=collada.state.animation_clips[p_clip].end;
 
-	while(f<collada.state.animation_length) {
-		if (f>=collada.state.animation_length)
-			f=collada.state.animation_length;
+	while(f<anim_length) {
+		if (f>=anim_length)
+			f=anim_length;
 
 		base_snapshots.push_back(f);
 		f+=snapshot_interval;

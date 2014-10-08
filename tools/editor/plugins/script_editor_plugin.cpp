@@ -188,7 +188,9 @@ void ScriptTextEditor::apply_code() {
 
 	if (script.is_null())
 		return;
+	print_line("applying code");
 	script->set_source_code(get_text_edit()->get_text());
+	script->update_exports();
 }
 
 Ref<Script> ScriptTextEditor::get_edited_script() const {
@@ -362,7 +364,8 @@ void ScriptTextEditor::_validate_script() {
 		line=-1;
 		if (!script->is_tool()) {
 			script->set_source_code(text);
-			script->reload(); //will update all the variables in property editors
+			script->update_exports();
+			//script->reload(); //will update all the variables in property editors
 		}
 
 		functions.clear();
@@ -1102,7 +1105,6 @@ void ScriptEditor::ensure_select_current() {
 		if (!ste)
 			return;
 		Ref<Script> script = ste->get_edited_script();
-		editor->call("_resource_selected",script);
 	}
 }
 

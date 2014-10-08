@@ -38,7 +38,7 @@
 #include "tools/editor/editor_settings.h"
 #include "scene/resources/surface_tool.h"
 #include "tools/editor/spatial_editor_gizmos.h"
-
+#include "globals.h"
 #define DISTANCE_DEFAULT 4
 
 
@@ -690,10 +690,16 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 
 				case BUTTON_WHEEL_UP: {
 
+
 					cursor.distance/=1.08;
+					if (cursor.distance<0.001)
+						cursor.distance=0.001;
+
 				} break;
 				case BUTTON_WHEEL_DOWN: {
 
+					if (cursor.distance<0.001)
+						cursor.distance=0.001;
 					cursor.distance*=1.08;
 
 				} break;
@@ -1753,6 +1759,41 @@ void SpatialEditorViewport::_draw() {
 
 	}
 
+	if (previewing) {
+
+
+		Size2 ss = Size2( Globals::get_singleton()->get("display/width"), Globals::get_singleton()->get("display/height") );
+		float aspect = ss.get_aspect();
+		Size2 s = get_size();
+
+		Rect2 draw_rect;
+
+
+		switch(previewing->get_keep_aspect_mode()) {
+			case Camera::KEEP_WIDTH: {
+
+				draw_rect.size = Size2(s.width,s.width/aspect);
+				draw_rect.pos.x=0;
+				draw_rect.pos.y=(s.height-draw_rect.size.y)*0.5;
+
+			} break;
+			case Camera::KEEP_HEIGHT: {
+
+				draw_rect.size = Size2(s.height*aspect,s.height);
+				draw_rect.pos.y=0;
+				draw_rect.pos.x=(s.width-draw_rect.size.x)*0.5;
+
+			} break;
+		}
+
+		draw_rect = Rect2(Vector2(),s).clip(draw_rect);
+
+		surface->draw_line(draw_rect.pos,draw_rect.pos+Vector2(draw_rect.size.x,0),Color(0.6,0.6,0.1,0.5),2.0);
+		surface->draw_line(draw_rect.pos+Vector2(draw_rect.size.x,0),draw_rect.pos+draw_rect.size,Color(0.6,0.6,0.1,0.5),2.0);
+		surface->draw_line(draw_rect.pos+draw_rect.size,draw_rect.pos+Vector2(0,draw_rect.size.y),Color(0.6,0.6,0.1,0.5),2.0);
+		surface->draw_line(draw_rect.pos,draw_rect.pos+Vector2(0,draw_rect.size.y),Color(0.6,0.6,0.1,0.5),2.0);
+	}
+
 }
 
 
@@ -1884,6 +1925,15 @@ void SpatialEditorViewport::_menu_option(int p_option) {
 			call_deferred("update_transform_gizmo_view");
 
 		} break;
+		case VIEW_AUDIO_LISTENER: {
+
+			int idx = view_menu->get_popup()->get_item_index(VIEW_AUDIO_LISTENER);
+			bool current = 	view_menu->get_popup()->is_item_checked( idx );
+			current=!current;
+			viewport->set_as_audio_listener(current);
+			view_menu->get_popup()->set_item_checked( idx, current );
+
+		} break;
 
 	}
 
@@ -1936,6 +1986,7 @@ void SpatialEditorViewport::_toggle_camera_preview(bool p_activate) {
 		if (!preview)
 			preview_camera->hide();
 		view_menu->show();
+		surface->update();
 
 	} else {
 
@@ -1943,6 +1994,7 @@ void SpatialEditorViewport::_toggle_camera_preview(bool p_activate) {
 		previewing->connect("exit_scene",this,"_preview_exited_scene");
 		VS::get_singleton()->viewport_attach_camera( viewport->get_viewport(), preview->get_camera() ); //replace
 		view_menu->hide();
+		surface->update();
 
 	}
 }
@@ -2012,6 +2064,13 @@ void SpatialEditorViewport::set_state(const Dictionary& p_state) {
 		_menu_option(VIEW_PERSPECTIVE);
 	if (env != camera->get_environment().is_valid())
 		_menu_option(VIEW_ENVIRONMENT);
+	if (p_state.has("listener")) {
+		bool listener = p_state["listener"];
+
+		int idx = view_menu->get_popup()->get_item_index(VIEW_AUDIO_LISTENER);
+		viewport->set_as_audio_listener(listener);
+		view_menu->get_popup()->set_item_checked( idx, listener );
+	}
 
 
 }
@@ -2025,6 +2084,7 @@ Dictionary SpatialEditorViewport::get_state() const {
 	d["distance"]=cursor.distance;
 	d["use_environment"]=camera->get_environment().is_valid();
 	d["use_orthogonal"]=camera->get_projection()==Camera::PROJECTION_ORTHOGONAL;
+	d["listener"]=viewport->is_audio_listener();
 	return d;
 }
 
@@ -2043,7 +2103,19 @@ void SpatialEditorViewport::_bind_methods(){
 }
 
 
+void SpatialEditorViewport::reset() {
 
+	orthogonal=false;
+	message_time=0;
+	message="";
+	last_message="";
+
+	cursor.x_rot=0;
+	cursor.y_rot=0;
+	cursor.distance=4;
+	cursor.region_select=false;
+
+}
 
 SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, EditorNode *p_editor, int p_index) {
 
@@ -2093,6 +2165,9 @@ SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, Ed
 	view_menu->get_popup()->add_check_item("Environment",VIEW_ENVIRONMENT);
 	view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(VIEW_ENVIRONMENT),true);
 	view_menu->get_popup()->add_separator();
+	view_menu->get_popup()->add_check_item("Audio Listener",VIEW_AUDIO_LISTENER);
+
+	view_menu->get_popup()->add_separator();
 	view_menu->get_popup()->add_item("Selection (F)",VIEW_CENTER_TO_SELECTION);
 	view_menu->get_popup()->add_item("Align with view (Ctrl+Shift+F)",VIEW_ALIGN_SELECTION_WITH_VIEW);
 	view_menu->get_popup()->connect("item_pressed",this,"_menu_option");
@@ -2108,6 +2183,12 @@ SpatialEditorViewport::SpatialEditorViewport(SpatialEditor *p_spatial_editor, Ed
 	previewing=NULL;
 	preview=NULL;
 	gizmo_scale=1.0;
+
+	if (p_index==0) {
+		view_menu->get_popup()->set_item_checked(view_menu->get_popup()->get_item_index(VIEW_AUDIO_LISTENER),true);
+		viewport->set_as_audio_listener(true);
+	}
+
 	EditorSettings::get_singleton()->connect("settings_changed",this,"update_transform_gizmo_view");
 
 }
@@ -2619,6 +2700,7 @@ void SpatialEditor::_menu_item_pressed(int p_option) {
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_NORMAL), true );
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_WIREFRAME), false );
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_OVERDRAW), false );
+			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_SHADELESS), false );
 
 		} break;
 		case MENU_VIEW_DISPLAY_WIREFRAME: {
@@ -2627,6 +2709,7 @@ void SpatialEditor::_menu_item_pressed(int p_option) {
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_NORMAL), false );
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_WIREFRAME), true );
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_OVERDRAW), false );
+			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_SHADELESS), false );
 
 		} break;
 		case MENU_VIEW_DISPLAY_OVERDRAW: {
@@ -2635,6 +2718,16 @@ void SpatialEditor::_menu_item_pressed(int p_option) {
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_NORMAL), false );
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_WIREFRAME), false );
 			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_OVERDRAW), true );
+			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_SHADELESS), false );
+
+		} break;
+		case MENU_VIEW_DISPLAY_SHADELESS: {
+
+			VisualServer::get_singleton()->scenario_set_debug( get_scene()->get_root()->get_world()->get_scenario(), VisualServer::SCENARIO_DEBUG_SHADELESS );
+			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_NORMAL), false );
+			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_WIREFRAME), false );
+			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_OVERDRAW), false );
+			view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_DISPLAY_SHADELESS), true );
 
 		} break;
 		case MENU_VIEW_ORIGIN: {
@@ -2806,11 +2899,13 @@ void SpatialEditor::_init_indicators() {
 		//move gizmo
 
 
+		float gizmo_alph = EditorSettings::get_singleton()->get("3d_editor/manipulator_gizmo_opacity");
+
 		gizmo_hl = Ref<FixedMaterial>( memnew( FixedMaterial ) );
 		gizmo_hl->set_flag(Material::FLAG_UNSHADED, true);
 		gizmo_hl->set_flag(Material::FLAG_ONTOP, true);
 		gizmo_hl->set_fixed_flag(FixedMaterial::FLAG_USE_ALPHA, true);
-		gizmo_hl->set_parameter(FixedMaterial::PARAM_DIFFUSE,Color(1,1,1,0.4));
+		gizmo_hl->set_parameter(FixedMaterial::PARAM_DIFFUSE,Color(1,1,1,gizmo_alph+0.2f));
 
 		for(int i=0;i<3;i++) {
 
@@ -2824,7 +2919,7 @@ void SpatialEditor::_init_indicators() {
 			mat->set_fixed_flag(FixedMaterial::FLAG_USE_ALPHA, true);
 			Color col;
 			col[i]=1.0;
-			col.a=0.2;
+			col.a= gizmo_alph;
 			mat->set_parameter(FixedMaterial::PARAM_DIFFUSE,col);
 			gizmo_color[i]=mat;
 
@@ -3215,6 +3310,39 @@ void SpatialEditor::_bind_methods() {
 
 }
 
+void SpatialEditor::clear() {
+
+	settings_fov->set_text(EDITOR_DEF("3d_editor/default_fov",60.0));
+	settings_znear->set_text(EDITOR_DEF("3d_editor/default_z_near",0.1));
+	settings_zfar->set_text(EDITOR_DEF("3d_editor/default_z_far",1500.0));
+
+	for(int i=0;i<4;i++) {
+		viewports[i]->reset();
+	}
+
+	_menu_item_pressed(MENU_VIEW_USE_1_VIEWPORT);
+	_menu_item_pressed(MENU_VIEW_DISPLAY_NORMAL);
+
+
+	VisualServer::get_singleton()->instance_geometry_set_flag(origin_instance,VS::INSTANCE_FLAG_VISIBLE,true);
+	view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_ORIGIN), true);
+	for(int i=0;i<3;++i) {
+		if (grid_enable[i]) {
+			VisualServer::get_singleton()->instance_geometry_set_flag(grid_instance[i],VS::INSTANCE_FLAG_VISIBLE,true);
+			grid_visible[i]=true;
+		}
+	}
+
+	for(int i=0;i<4;i++) {
+
+		viewports[i]->view_menu->get_popup()->set_item_checked(view_menu->get_popup()->get_item_index(SpatialEditorViewport::VIEW_AUDIO_LISTENER),i==0);
+		viewports[i]->viewport->set_as_audio_listener(i==0);
+	}
+	view_menu->get_popup()->set_item_checked( view_menu->get_popup()->get_item_index(MENU_VIEW_GRID), true );
+
+
+}
+
 SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 
 
@@ -3321,6 +3449,7 @@ SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 	p->add_check_item("Display Normal",MENU_VIEW_DISPLAY_NORMAL);
 	p->add_check_item("Display Wireframe",MENU_VIEW_DISPLAY_WIREFRAME);
 	p->add_check_item("Display Overdraw",MENU_VIEW_DISPLAY_OVERDRAW);
+	p->add_check_item("Display Shadeless",MENU_VIEW_DISPLAY_SHADELESS);
 	p->add_separator();
 	p->add_check_item("View Origin",MENU_VIEW_ORIGIN);
 	p->add_check_item("View Grid",MENU_VIEW_GRID);
@@ -3443,7 +3572,7 @@ SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 	settings_zfar->set_anchor( MARGIN_RIGHT, ANCHOR_END );
 	settings_zfar->set_begin( Point2(15,102) );
 	settings_zfar->set_end( Point2(15,115) );
-	settings_zfar->set_text(EDITOR_DEF("3d_editor/default_z_far",500.0));
+	settings_zfar->set_text(EDITOR_DEF("3d_editor/default_z_far",1500.0));
 	settings_dialog->add_child(settings_zfar);
 
 	//settings_dialog->get_cancel()->hide();
@@ -3513,6 +3642,7 @@ SpatialEditor::SpatialEditor(EditorNode *p_editor) {
 
 	EDITOR_DEF("3d_editor/manipulator_gizmo_size",80);
 	EditorSettings::get_singleton()->add_property_hint(PropertyInfo(Variant::INT,"3d_editor/manipulator_gizmo_size",PROPERTY_HINT_RANGE,"16,1024,1"));
+	EDITOR_DEF("3d_editor/manipulator_gizmo_opacity",0.2);
 
 	over_gizmo_handle=-1;
 }
