@@ -306,7 +306,7 @@ void main() {
 #endif
 
 #if defined(ENABLE_TANGENT_INTERP)
-	tangent_interp=normalize(tangent_in);
+	tangent_interp=normalize((modelview * vec4(tangent_in,0.0)).xyz);
 	binormal_interp = normalize( cross(normal_interp,tangent_interp) * binormalf );
 #endif
 
@@ -824,6 +824,8 @@ void main() {
 	vec3 normalmap = vec3(0.0);
 #endif
 
+	float normaldepth=1.0;
+
 
 
 #if defined(ENABLE_DISCARD)
@@ -839,7 +841,8 @@ FRAGMENT_SHADER_CODE
 
 #if defined(ENABLE_NORMALMAP)
 
-	normal = normalize( tangent_interp * normalmap.x + binormal_interp * normalmap.y + normal_interp * normalmap.z ) * side;
+	normal = normalize( mix(normal_interp,tangent_interp * normalmap.x + binormal_interp * normalmap.y + normal_interp * normalmap.z,normaldepth) ) * side;
+
 #endif
 
 #if defined(ENABLE_DISCARD)
