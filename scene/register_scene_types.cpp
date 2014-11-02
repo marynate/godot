@@ -398,6 +398,13 @@ void register_scene_types() {
 	ObjectTypeDB::register_type<BakedLightSampler>();
 	ObjectTypeDB::register_type<WorldEnvironment>();
 
+	ObjectTypeDB::register_virtual_type<Joint>();
+	ObjectTypeDB::register_type<PinJoint>();
+	ObjectTypeDB::register_type<HingeJoint>();
+	ObjectTypeDB::register_type<SliderJoint>();
+	ObjectTypeDB::register_type<ConeTwistJoint>();
+	ObjectTypeDB::register_type<Generic6DOFJoint>();
+
 	//scenariofx	
 
 	OS::get_singleton()->yield(); //may take time to init
@@ -405,6 +412,7 @@ void register_scene_types() {
 	ObjectTypeDB::register_type<SpatialSamplePlayer>();
 	ObjectTypeDB::register_type<SpatialStreamPlayer>();
 	ObjectTypeDB::register_type<SoundRoomParams>();
+
 
 #endif
 	ObjectTypeDB::register_type<MeshLibrary>();
@@ -423,12 +431,6 @@ void register_scene_types() {
 	//ObjectTypeDB::register_type<PhysicsJointPin>();
 
 
-	ObjectTypeDB::register_virtual_type<Joint>();
-	ObjectTypeDB::register_type<PinJoint>();
-	ObjectTypeDB::register_type<HingeJoint>();
-	ObjectTypeDB::register_type<SliderJoint>();
-	ObjectTypeDB::register_type<ConeTwistJoint>();
-	ObjectTypeDB::register_type<Generic6DOFJoint>();
 
 
 	ObjectTypeDB::register_type<StreamPlayer>();
