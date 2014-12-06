@@ -253,7 +253,27 @@ inline int atomic_decrement(volatile int* v)
    return t;
 }
 
+/* CW ARM64 */
 
+#elif defined( __GNUC__ ) && ( defined( __arm64__ )  )
+
+#define REFCOUNT_T int
+#define REFCOUNT_GET_T int const volatile&
+
+#include <libkern/OSAtomic.h>
+
+inline int atomic_conditional_increment(volatile int* v)
+{
+   int rv = *v;
+   if( rv != 0 ) rv = OSAtomicIncrement32((int32_t*)&v);
+   return rv;
+}
+
+
+inline int atomic_decrement(volatile int* v)
+{
+   return OSAtomicDecrement32((int32_t*)&v);
+}
 
 /* CW PPC */
 
