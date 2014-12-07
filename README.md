@@ -1,6 +1,7 @@
 ![GODOT](/logo.png)
 
 ### Build Status
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/marynate/godot?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 master: [![Build Status](https://travis-ci.org/marynate/godot.svg?branch=master)](https://travis-ci.org/marynate/godot)
 dev:  [![Build Status](https://travis-ci.org/marynate/godot.svg?branch=dev)](https://travis-ci.org/marynate/godot)
