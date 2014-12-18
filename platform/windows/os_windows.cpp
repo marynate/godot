@@ -1418,8 +1418,9 @@ void OS_Windows::set_window_title(const String& p_title) {
 
 void OS_Windows::set_video_mode(const VideoMode& p_video_mode,int p_screen) {
 
-	
+
 }
+
 OS::VideoMode OS_Windows::get_video_mode(int p_screen) const {
 
 	return video_mode;
