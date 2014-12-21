@@ -1480,12 +1480,12 @@ OS_X11::OS_X11() {
 	AudioDriverManagerSW::add_driver(&driver_rtaudio);
 #endif
 
-#ifdef ALSA_ENABLED
-	AudioDriverManagerSW::add_driver(&driver_alsa);
-#endif
-
 #ifdef PULSEAUDIO_ENABLED
 	AudioDriverManagerSW::add_driver(&driver_pulseaudio);
+#endif
+
+#ifdef ALSA_ENABLED
+	AudioDriverManagerSW::add_driver(&driver_alsa);
 #endif
 
 	minimized = false;
