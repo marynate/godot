@@ -6,6 +6,7 @@ iphone_lib = [
 	#'rasterizer_iphone.cpp',
 	'audio_driver_iphone.cpp',
 	'sem_iphone.cpp',
+	'safe_refcount_iphone.cpp',
 	'gl_view.mm',
 	'main.m',
 	'app_delegate.mm',
