@@ -204,58 +204,9 @@ inline int atomic_decrement( int * pw )
     return rv;
 }
 
-/* CW ARM */
+/* CW ARM and ARM64 */
 
-#elif defined( __GNUC__ ) && ( defined( __arm__ )  )
-
-#define REFCOUNT_T int
-#define REFCOUNT_GET_T int const volatile&
-
-inline int atomic_conditional_increment(volatile int* v)
-{
-   int t;
-   int tmp;
-
-   __asm__ __volatile__(
-			 "1:  ldrex   %0, [%2]        \n"
-			 "    cmp     %0, #0      \n"
-			 "    beq     2f          \n"
-			 "    add     %0, %0, #1      \n"
-			 "2: \n"
-			 "    strex   %1, %0, [%2]    \n"
-			 "    cmp     %1, #0          \n"
-			 "    bne     1b              \n"
-
-			 : "=&r" (t), "=&r" (tmp)
-			 : "r" (v)
-			 : "cc", "memory");
-
-   return t;
-}
-
-
-inline int atomic_decrement(volatile int* v)
-{
-   int t;
-   int tmp;
-
-   __asm__ __volatile__(
-			 "1:  ldrex   %0, [%2]        \n"
-			 "    add     %0, %0, #-1      \n"
-			 "    strex   %1, %0, [%2]    \n"
-			 "    cmp     %1, #0          \n"
-			 "    bne     1b              \n"
-
-			 : "=&r" (t), "=&r" (tmp)
-			 : "r" (v)
-			 : "cc", "memory");
-
-   return t;
-}
-
-/* CW ARM64 */
-
-#elif defined( __GNUC__ ) && ( defined( __arm64__ )  )
+#elif defined( __GNUC__ ) && ( defined( __arm__ ) || defined( __arm64__ )  )
 
 #define REFCOUNT_T int
 #define REFCOUNT_GET_T int const volatile&
@@ -264,15 +215,13 @@ inline int atomic_decrement(volatile int* v)
 
 inline int atomic_conditional_increment(volatile int* v)
 {
-   int rv = *v;
-   if( rv != 0 ) rv = OSAtomicIncrement32((int32_t*)&v);
-   return rv;
+   return (*v==0)? 0 : OSAtomicIncrement32(v);
 }
 
 
 inline int atomic_decrement(volatile int* v)
 {
-   return OSAtomicDecrement32((int32_t*)&v);
+   return OSAtomicDecrement32(v);
 }
 
 /* CW PPC */
