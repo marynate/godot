@@ -1,8 +1,8 @@
 //
 //  DFPInterstitial.h
-//  Google Ads iOS SDK
+//  Google Mobile Ads SDK
 //
-//  Copyright (c) 2012 Google Inc. All rights reserved.
+//  Copyright 2012 Google Inc. All rights reserved.
 //
 
 #import "GADInterstitial.h"
@@ -11,6 +11,6 @@
 
 @interface DFPInterstitial : GADInterstitial
 
-@property(nonatomic, assign) NSObject<GADAppEventDelegate> *appEventDelegate;
+@property(nonatomic, weak) id<GADAppEventDelegate> appEventDelegate;
 
 @end

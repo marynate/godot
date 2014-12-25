@@ -1,18 +1,19 @@
 //
 //  GADAppEventDelegate.h
-//  Google Ads iOS SDK
+//  Google Mobile Ads SDK
 //
-//  Copyright (c) 2012 Google Inc. All rights reserved.
+//  Copyright 2012 Google Inc. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
-#import "GADBannerView.h"
-#import "GADInterstitial.h"
+
+@class GADBannerView;
+@class GADInterstitial;
 
 @protocol GADAppEventDelegate<NSObject>
 
-// Implement your app event within these methods. The delegate will be notified
-// when the SDK receives an app event message from the ad.
+// Implement your app event within these methods. The delegate will be notified when the SDK
+// receives an app event message from the ad.
 @optional
 
 - (void)adView:(GADBannerView *)banner
