@@ -40,213 +40,22 @@ public class GodotAdMob extends Godot.SingletonBase {
 	boolean failedToReceiveAd;
 	boolean applicationLeaved;
 	boolean presentScreen;
+
+	boolean interstitialAdReceived;
+	boolean interstitialScreenDismissed;
+	boolean interstitialFailedToReceiveAd;
+	boolean interstitialApplicationLeaved;
+	boolean interstitialPresentScreen;
 	
-	int layoutRule1;
-	int layoutRule2;
-
-	public void InitializeUIThread(String p_banner_id, String p_interstitial_id, boolean p_test_mode, String p_test_devices, boolean p_smart_banner) {
-
-		adRequestBuilder = new AdRequest.Builder();
-
-		if (p_test_mode) {
-            adRequestBuilder.addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
-            
-            if (p_test_devices != null && p_test_devices.trim() != "") {
-                for (String device : p_test_devices.split(",")) {
-                    adRequestBuilder.addTestDevice(device);
-					Log.d("godot", "AdMob: addTestDevice: " + device);
-                }
-            }
-        }
-		
-		// Create the interstitial
-		interstitial = new InterstitialAd(activity);
-		interstitial.setAdUnitId(p_interstitial_id);
-		interstitial.setAdListener(new AdListener() {
-			@Override
-			public void onAdLoaded() {
-				Log.d("godot", "AdMob: onAdLoaded");
-				interstitial.show();
-				adReceived = true;
-			}
-
-			@Override
-			public void onAdClosed() {
-				Log.d("godot", "AdMob: onAdClosed");
-				screenDismissed = true;
-			}
-
-			@Override
-			public void onAdFailedToLoad(int errorCode) {
-				Log.w("godot", "AdMob: onAdFailedToLoad-> " + errorCode);
-				failedToReceiveAd = true;
-			}
-
-			@Override
-			public void onAdLeftApplication() {
-				Log.d("godot", "AdMob: onAdLeftApplication");
-				applicationLeaved = true;
-			}
-
-			@Override
-			public void onAdOpened() {
-                Log.d("godot", "AdMob: onAdOpened");
-                presentScreen = true;
-            }
-        });
-
-		
-		// Create banner
-		adView = new AdView(activity);
-		if (p_smart_banner) {
-			adView.setAdSize(AdSize.SMART_BANNER);
-		} else {
-			adView.setAdSize(AdSize.BANNER);
-		}
-
-		adView.setAdUnitId(p_banner_id);
-
-		RelativeLayout layout = ((Godot)activity).adLayout;
-		RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT,
-	        LayoutParams.WRAP_CONTENT);
+	int verticalLayoutRule;
+	int horizontalLayoutRule;
 	
-		layoutParams.addRule(layoutRule1);
-		layoutParams.addRule(layoutRule2);
-		layout.addView(adView, layoutParams);
-		layout.invalidate();
-	
-        adView.setAdListener(new AdListener() {
-            @Override
-            public void onAdLoaded() {
-                Log.d("godot", "AdMob: onAdLoaded");
-                adReceived = true;
-            }
-            
-            @Override
-            public void onAdClosed() {
-                Log.d("godot", "AdMob: onAdClosed");
-                screenDismissed = true;
-            }
-            
-            @Override
-            public void onAdFailedToLoad(int errorCode) {
-                Log.w("godot", "AdMob: onAdFailedToLoad-> " + errorCode);
-                failedToReceiveAd = true;
-            }
-            
-            @Override
-            public void onAdLeftApplication() {
-                Log.d("godot", "AdMob: onAdLeftApplication");
-                applicationLeaved = true;
-            }
-            
-            @Override
-            public void onAdOpened() {
-                Log.d("godot", "AdMob: onAdOpened");
-                presentScreen = true;
-            }
-        });
-        
-		adView.setVisibility(View.VISIBLE);
-		
-		initialized = true;
-		
-		adReceived = false;
-		screenDismissed = false;
-		failedToReceiveAd = false;
-		applicationLeaved = false;
-		presentScreen = false;
-
-		Log.d("godot", "AdMob: Initialized");
-	}	
-	
-	public void ShowInterstitialUIThread()
-	{
-		if (initialized)
-		{
-			// Create ad request
-			AdRequest adRequest = adRequestBuilder.build();
-
-			// Begin loading your interstitial
-			interstitial.loadAd(adRequest);
-
-			// Set Ad Listener to use the callbacks below
-			//interstitial.setAdListener((AdListener) this);
-			
-            adReceived = false;
-		    screenDismissed = false;
-		    failedToReceiveAd = false;
-		    applicationLeaved = false;
-		    presentScreen = false;
-			
-			Log.d("godot", "AdMob: Show Interstitial");
-		}
-		else
-		{
-			Log.e("godot", "AdMob: Calling \"ShowInterstitial()\" but AdMob not initilized");
-		}
-	} 	
-
-	public void ShowBannerUIThread()
-	{
-		if (initialized)
-		{
-			AdRequest request = adRequestBuilder.build();
-			//adView.setVisibility(View.VISIBLE);
-			adView.loadAd(request);
-
-			Log.d("godot", "AdMob: Show Banner");
-		}
-		else
-		{
-			Log.e("godot", "AdMob: Calling \"ShowBanner()\" but AdMob not initilized");
-		}
-	}
-	
-	public void HideBannerUIThread()
-	{
-		if (initialized)
-		{
-		    adView.setVisibility(View.GONE);
-    		    Log.d("godot", "AdMob: Hide Banner");
-		}	
-	}
-
-	void ShowBannerAt(final int p_rule1, final int p_rule2)
-	{
-		if (!initialized) return;
-		if (adView == null) return;
-
+	public void LoadBanner() {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
-
-				if (layoutRule1 != p_rule1 || layoutRule2 != p_rule2 || adView.getVisibility() != View.VISIBLE)
-				{
-					layoutRule1 = p_rule1;
-					layoutRule2 = p_rule2;
-					SetBannerView();
-					adView.setVisibility(View.VISIBLE);
-				}
+				LoadBannerUIThread();
 			}
 		});
-	}
-	
-	public void ShowBannerBottomLeft()
-	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.ALIGN_PARENT_LEFT);
-		Log.d("godot", "AdMob: Moving Banner to bottom left");
-	}
-	
-	public void ShowBannerBottomRight()
-	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.ALIGN_PARENT_RIGHT);
-		Log.d("godot", "AdMob: Moving Banner to bottom right");
-	}
-
-	public void ShowBannerBottomCenter()
-	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.CENTER_HORIZONTAL);
-		Log.d("godot", "AdMob: Moving Banner to bottom center");
 	}
 
 	public void ShowBannerTopLeft()
@@ -255,56 +64,36 @@ public class GodotAdMob extends Godot.SingletonBase {
 		Log.d("godot", "AdMob: Moving Banner to top left");
 	}
 
-	public void ShowBannerTopRight()
-	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.ALIGN_PARENT_RIGHT);
-		Log.d("godot", "AdMob: Moving Banner to top right");
-	}
-	
 	public void ShowBannerTopCenter()
 	{
 		ShowBannerAt(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.CENTER_HORIZONTAL);
 		Log.d("godot", "AdMob: Moving Banner to top center");
 	}
 
-	void SetBannerView()
+	public void ShowBannerTopRight()
 	{
-		RelativeLayout layout = ((Godot)activity).adLayout;
-		RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT,
-                LayoutParams.WRAP_CONTENT);
-		
-		layoutParams.addRule(layoutRule1);
-		layoutParams.addRule(layoutRule2);
-		
-		layout.removeView(adView);
-		layout.addView(adView, layoutParams);		
+		ShowBannerAt(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.ALIGN_PARENT_RIGHT);
+		Log.d("godot", "AdMob: Moving Banner to top right");
 	}
 	
-	public void Initialize(final String p_banner_id, final String p_interstitial_id, final boolean p_test_mode, final String p_test_devices, final boolean p_smart_banner) {
+	public void ShowBannerBottomLeft()
+	{
+		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.ALIGN_PARENT_LEFT);
+		Log.d("godot", "AdMob: Moving Banner to bottom left");
+	}
+	
+	public void ShowBannerBottomCenter()
+	{
+		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.CENTER_HORIZONTAL);
+		Log.d("godot", "AdMob: Moving Banner to bottom center");
+	}
 
-		activity.runOnUiThread(new Runnable() {
-			public void run() {
-				InitializeUIThread(p_banner_id, p_interstitial_id, p_test_mode, p_test_devices, p_smart_banner);
-			}
-		});
+	public void ShowBannerBottomRight()
+	{
+		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.ALIGN_PARENT_RIGHT);
+		Log.d("godot", "AdMob: Moving Banner to bottom right");
 	}
-	
-	public void ShowInterstitial() {
-		activity.runOnUiThread(new Runnable() {
-			public void run() {
-				ShowInterstitialUIThread();
-			}
-		});
-	}	
-	
-	public void LoadBanner() {
-		activity.runOnUiThread(new Runnable() {
-			public void run() {
-				ShowBannerUIThread();
-			}
-		});
-	}
-	
+
 	public void HideBanner() {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
@@ -312,7 +101,29 @@ public class GodotAdMob extends Godot.SingletonBase {
 			}
 		});
 	}	
+
+	public void LoadInterstitial()
+	{
+		activity.runOnUiThread(new Runnable() {
+			public void run() {
+				LoadInterstitialUIThread();
+			}
+		});
+	}	
 	
+	public void ShowInterstitial()
+	{
+		if (!initialized) return;
+		if (interstitial == null) return;
+
+		activity.runOnUiThread(new Runnable() {
+			public void run() {
+				if (interstitial.isLoaded())
+					interstitial.show();
+			}
+		});
+	}
+
 	public boolean HasReceiveAd() {
 		boolean ret = adReceived;
 		adReceived = false;
@@ -343,6 +154,36 @@ public class GodotAdMob extends Godot.SingletonBase {
 		return ret;
 	} 	
 
+	public boolean HasInterstitialReceiveAd() {
+		boolean ret = interstitialAdReceived;
+		interstitialAdReceived = false;
+		return ret;
+	}
+
+	public boolean HasInterstitialDismissScreen() {
+		boolean ret = interstitialScreenDismissed;
+		interstitialScreenDismissed = false;
+		return ret;
+	}
+
+	public boolean HasInterstitialFailedToReceive() {
+		boolean ret = interstitialFailedToReceiveAd;
+		interstitialFailedToReceiveAd = false;
+		return ret;
+	}
+
+	public boolean HasInterstitialLeaveApplication() {
+		boolean ret = interstitialApplicationLeaved;
+		interstitialApplicationLeaved = false;
+		return ret;
+	}
+
+	public boolean HasInterstitialPresentScreen() {
+		boolean ret = interstitialPresentScreen;
+		interstitialPresentScreen = false;
+		return ret;
+	}
+
 	@Override
 	protected void onMainPause() {
 		if (adView != null) {
@@ -371,22 +212,255 @@ public class GodotAdMob extends Godot.SingletonBase {
 
 	}
 
+	void LoadInterstitialUIThread()
+	{
+		if (initialized)
+		{
+			if (interstitial != null) {
+				AdRequest adRequest = adRequestBuilder.build();
+				interstitial.loadAd(adRequest);
+			}
+
+			interstitialAdReceived = false;
+			interstitialScreenDismissed = false;
+			interstitialFailedToReceiveAd = false;
+			interstitialApplicationLeaved = false;
+			interstitialPresentScreen = false;
+			
+			Log.d("godot", "AdMob: Load Interstitial");
+		}
+		else
+		{
+			Log.e("godot", "AdMob: Calling \"LoadInterstitial()\" but AdMob not initilized");
+		}
+	}
+
+	void LoadBannerUIThread()
+	{
+		if (initialized)
+		{
+			AdRequest request = adRequestBuilder.build();
+			//adView.setVisibility(View.VISIBLE);
+			adView.loadAd(request);
+
+			Log.d("godot", "AdMob: Load Banner");
+		}
+		else
+		{
+			Log.e("godot", "AdMob: Calling \"LoadBanner()\" but AdMob not initilized");
+		}
+	}
+	
+	void HideBannerUIThread()
+	{
+		if (initialized)
+		{
+		    adView.setVisibility(View.GONE);
+    		    Log.d("godot", "AdMob: Hide Banner");
+		}	
+	}
+
+	void ShowBannerAt(final int p_rule1, final int p_rule2)
+	{
+		if (!initialized) return;
+		if (adView == null) return;
+
+		activity.runOnUiThread(new Runnable() {
+			public void run() {
+
+				//if (verticalLayoutRule != p_rule1 || horizontalLayoutRule != p_rule2)
+				//{
+					verticalLayoutRule = p_rule1;
+					horizontalLayoutRule = p_rule2;
+					SetAdViewLayout();
+				//}
+
+				adView.setVisibility(View.VISIBLE);
+			}
+		});
+	}
+
+	void SetAdViewLayout()
+	{
+		RelativeLayout layout = ((Godot)activity).adLayout;
+		RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT);
+		
+		layoutParams.addRule(verticalLayoutRule);
+		layoutParams.addRule(horizontalLayoutRule);
+		
+		layout.removeView(adView);
+		layout.addView(adView, layoutParams);
+	}
+	
+
 	static public Godot.SingletonBase initialize(Activity p_activity) {
 
 		return new GodotAdMob(p_activity);
 	}
 
+	void Initialize(final String p_banner_id, final String p_interstitial_id, final boolean p_test_mode, final String p_test_devices, final boolean p_smart_banner) {
+
+		activity.runOnUiThread(new Runnable() {
+			public void run() {
+				InitializeUIThread(p_banner_id, p_interstitial_id, p_test_mode, p_test_devices, p_smart_banner);
+			}
+		});
+	}
+
+	void InitializeUIThread(String p_banner_id, String p_interstitial_id, boolean p_test_mode, String p_test_devices, boolean p_smart_banner) {
+
+		adRequestBuilder = new AdRequest.Builder();
+
+		if (p_test_mode) {
+            adRequestBuilder.addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
+            
+            if (p_test_devices != null && p_test_devices.trim() != "") {
+                for (String device : p_test_devices.split(",")) {
+					adRequestBuilder.addTestDevice(device.trim());
+					Log.d("godot", "AdMob: addTestDevice: " + device);
+                }
+            }
+        }
+		
+		// Create interstitial
+		if (p_interstitial_id != null && p_interstitial_id.trim() != "") {
+
+			interstitial = new InterstitialAd(activity);
+			interstitial.setAdUnitId(p_interstitial_id);
+			interstitial.setAdListener(new AdListener() {
+				@Override
+				public void onAdLoaded() {
+					Log.d("godot", "AdMob: interstitial onAdLoaded");
+					//interstitial.show();
+					interstitialAdReceived = true;
+				}
+
+				@Override
+				public void onAdClosed() {
+					Log.d("godot", "AdMob: interstitial onAdClosed");
+					interstitialScreenDismissed = true;
+				}
+
+				@Override
+				public void onAdFailedToLoad(int errorCode) {
+					Log.w("godot", "AdMob: interstitial onAdFailedToLoad-> " + errorCode);
+					interstitialFailedToReceiveAd = true;
+				}
+
+				@Override
+				public void onAdLeftApplication() {
+					Log.d("godot", "AdMob: interstitial onAdLeftApplication");
+					interstitialApplicationLeaved = true;
+				}
+
+				@Override
+				public void onAdOpened() {
+					Log.d("godot", "AdMob: interstitial onAdOpened");
+					interstitialPresentScreen = true;
+				}
+			});
+		}
+
+
+		
+		// Create banner
+		adView = new AdView(activity);
+		if (p_smart_banner) {
+			adView.setAdSize(AdSize.SMART_BANNER);
+		} else {
+			adView.setAdSize(AdSize.BANNER);
+		}
+
+		adView.setAdUnitId(p_banner_id);
+
+		RelativeLayout layout = ((Godot)activity).adLayout;
+		RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT,
+	        LayoutParams.WRAP_CONTENT);
+	
+		layoutParams.addRule(verticalLayoutRule);
+		layoutParams.addRule(horizontalLayoutRule);
+		layout.addView(adView, layoutParams);
+		layout.invalidate();
+	
+        adView.setAdListener(new AdListener() {
+
+			/** Called when an ad is loaded. */
+			@Override
+			public void onAdLoaded() {
+				Log.d("godot", "AdMob: onAdLoaded");
+				adReceived = true;
+			}
+
+			/** Called when an ad is clicked and about to return to the application. */
+			@Override
+			public void onAdClosed() {
+				Log.d("godot", "AdMob: onAdClosed");
+				screenDismissed = true;
+			}
+
+			/** Called when an ad failed to load. */
+			@Override
+			public void onAdFailedToLoad(int errorCode) {
+				Log.w("godot", "AdMob: onAdFailedToLoad-> " + errorCode);
+				failedToReceiveAd = true;
+			}
+
+			/**
+			* Called when an ad is clicked and going to start a new Activity that will
+			* leave the application (e.g. breaking out to the Browser or Maps
+			* application).
+			*/
+			@Override
+			public void onAdLeftApplication() {
+				Log.d("godot", "AdMob: onAdLeftApplication");
+				applicationLeaved = true;
+			}
+
+			/**
+			* Called when an Activity is created in front of the app (e.g. an
+			* interstitial is shown, or an ad is clicked and launches a new Activity).
+			*/
+			@Override
+			public void onAdOpened() {
+				Log.d("godot", "AdMob: onAdOpened");
+				presentScreen = true;
+			}
+		});
+
+		adView.setVisibility(View.VISIBLE);
+		
+		initialized = true;
+		
+		adReceived = false;
+		screenDismissed = false;
+		failedToReceiveAd = false;
+		applicationLeaved = false;
+		presentScreen = false;
+
+		interstitialAdReceived = false;
+		interstitialScreenDismissed = false;
+		interstitialFailedToReceiveAd = false;
+		interstitialApplicationLeaved = false;
+		interstitialPresentScreen = false;
+
+		Log.d("godot", "AdMob: Initialized");
+	}
+
 	public GodotAdMob(Activity p_activity) {
 
 		registerClass("AdMob", new String[] {"LoadBanner", "HideBanner",
-				"ShowBannerBottomLeft", "ShowBannerBottomRight", "ShowBannerBottomCenter", "ShowBannerTopLeft", "ShowBannerTopRight", "ShowBannerTopCenter", "ShowInterstitial", "HasReceiveAd",
-				"HasDismissScreen", "HasFailedToReceive","HasLeaveApplication","HasPresentScreen"});
+				"ShowBannerBottomLeft", "ShowBannerBottomRight", "ShowBannerBottomCenter", "ShowBannerTopLeft", "ShowBannerTopRight", "ShowBannerTopCenter",
+				"HasReceiveAd", "HasDismissScreen", "HasFailedToReceive","HasLeaveApplication","HasPresentScreen",
+				"LoadInterstitial", "ShowInterstitial",
+				"HasInterstitialReceiveAd", "HasInterstitialDismissScreen", "HasInterstitialFailedToReceive","HasInterstitialLeaveApplication","HasInterstitialPresentScreen"});
+
 		
 		activity=p_activity;
 		initialized = false;
 		
-		layoutRule1 = RelativeLayout.ALIGN_PARENT_BOTTOM;
-		layoutRule2 = RelativeLayout.ALIGN_PARENT_LEFT;	
+		verticalLayoutRule = RelativeLayout.ALIGN_PARENT_BOTTOM;
+		horizontalLayoutRule = RelativeLayout.CENTER_HORIZONTAL;	
 
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
