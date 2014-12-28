@@ -2,7 +2,9 @@
 
 @interface AdMobInterstitial: UIViewController <GADInterstitialDelegate> {
   GADInterstitial *interstitial_;
-  NSString* admobID;
+  NSString* interstitialID;
+  BOOL testMode;
+  NSArray* testDevices;
   BOOL hasReceiveAd;
   BOOL hasDismissScreen;
   BOOL hasFailedReceiveAd;
@@ -10,9 +12,10 @@
   BOOL hasPresetScreen;
 }
 
-@property(nonatomic, retain) GADInterstitial *interstitial;
+@property(nonatomic, strong) GADInterstitial *interstitial;
 
-- (void)initialize:(NSString*)admobId;
+- (void)initialize:(NSString*)p_interstitialID testMode:(BOOL)p_testMode  testDevices:(NSArray*)p_testDevices;
+- (void)loadInterstitial;
 - (void)showInterstitial;
 - (BOOL)HasReceiveAd;
 - (BOOL)HasDismissScreen;

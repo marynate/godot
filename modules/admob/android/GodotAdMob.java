@@ -58,40 +58,52 @@ public class GodotAdMob extends Godot.SingletonBase {
 		});
 	}
 
-	public void ShowBannerTopLeft()
+	public void ShowBanner()
 	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.ALIGN_PARENT_LEFT);
-		Log.d("godot", "AdMob: Moving Banner to top left");
+		if (!initialized) return;
+		if (adView == null) return;
+
+		activity.runOnUiThread(new Runnable() {
+			public void run() {
+				adView.setVisibility(View.VISIBLE);
+			}
+		});
 	}
 
-	public void ShowBannerTopCenter()
+	public void SetBannerTopLeft()
 	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.CENTER_HORIZONTAL);
-		Log.d("godot", "AdMob: Moving Banner to top center");
+		SetBannerPos(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.ALIGN_PARENT_LEFT);
+		Log.d("godot", "AdMob: Set Banner position to top left");
 	}
 
-	public void ShowBannerTopRight()
+	public void SetBannerTopCenter()
 	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.ALIGN_PARENT_RIGHT);
-		Log.d("godot", "AdMob: Moving Banner to top right");
+		SetBannerPos(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.CENTER_HORIZONTAL);
+		Log.d("godot", "AdMob: Set Banner position to top center");
+	}
+
+	public void SetBannerTopRight()
+	{
+		SetBannerPos(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.ALIGN_PARENT_RIGHT);
+		Log.d("godot", "AdMob: Set Banner position to top right");
 	}
 	
-	public void ShowBannerBottomLeft()
+	public void SetBannerBottomLeft()
 	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.ALIGN_PARENT_LEFT);
-		Log.d("godot", "AdMob: Moving Banner to bottom left");
+		SetBannerPos(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.ALIGN_PARENT_LEFT);
+		Log.d("godot", "AdMob: Set Banner position to bottom left");
 	}
 	
-	public void ShowBannerBottomCenter()
+	public void SetBannerBottomCenter()
 	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.CENTER_HORIZONTAL);
-		Log.d("godot", "AdMob: Moving Banner to bottom center");
+		SetBannerPos(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.CENTER_HORIZONTAL);
+		Log.d("godot", "AdMob: Set Banner position to bottom center");
 	}
 
-	public void ShowBannerBottomRight()
+	public void SetBannerBottomRight()
 	{
-		ShowBannerAt(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.ALIGN_PARENT_RIGHT);
-		Log.d("godot", "AdMob: Moving Banner to bottom right");
+		SetBannerPos(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.ALIGN_PARENT_RIGHT);
+		Log.d("godot", "AdMob: Set Banner position to bottom right");
 	}
 
 	public void HideBanner() {
@@ -184,34 +196,6 @@ public class GodotAdMob extends Godot.SingletonBase {
 		return ret;
 	}
 
-	@Override
-	protected void onMainPause() {
-		if (adView != null) {
-			adView.pause();
-			Log.d("godot", "AdMob: adView paused");
-		}
-		super.onMainPause();
-	}
-
-	@Override
-	protected void onMainResume() {
-		super.onMainResume();
-		if (adView != null) {
-			adView.resume();
-			Log.d("godot", "AdMob: adView resumed");
-		}
-	}
-
-	@Override
-	protected void onMainDestroy() {
-		if (adView != null) {
-			adView.destroy();
-			Log.d("godot", "AdMob: adView destroyed");
-		}
-		super.onMainDestroy();
-
-	}
-
 	void LoadInterstitialUIThread()
 	{
 		if (initialized)
@@ -260,7 +244,7 @@ public class GodotAdMob extends Godot.SingletonBase {
 		}	
 	}
 
-	void ShowBannerAt(final int p_rule1, final int p_rule2)
+	void SetBannerPos(final int p_rule1, final int p_rule2)
 	{
 		if (!initialized) return;
 		if (adView == null) return;
@@ -269,13 +253,13 @@ public class GodotAdMob extends Godot.SingletonBase {
 			public void run() {
 
 				//if (verticalLayoutRule != p_rule1 || horizontalLayoutRule != p_rule2)
-				//{
+				{
 					verticalLayoutRule = p_rule1;
 					horizontalLayoutRule = p_rule2;
 					SetAdViewLayout();
-				//}
+				}
 
-				adView.setVisibility(View.VISIBLE);
+				//adView.setVisibility(View.VISIBLE);
 			}
 		});
 	}
@@ -447,20 +431,47 @@ public class GodotAdMob extends Godot.SingletonBase {
 		Log.d("godot", "AdMob: Initialized");
 	}
 
+	@Override
+	protected void onMainPause() {
+		if (adView != null) {
+			adView.pause();
+			Log.d("godot", "AdMob: adView paused");
+		}
+		super.onMainPause();
+	}
+
+	@Override
+	protected void onMainResume() {
+		super.onMainResume();
+		if (adView != null) {
+			adView.resume();
+			Log.d("godot", "AdMob: adView resumed");
+		}
+	}
+
+	@Override
+	protected void onMainDestroy() {
+		if (adView != null) {
+			adView.destroy();
+			Log.d("godot", "AdMob: adView destroyed");
+		}
+		super.onMainDestroy();
+
+	}
+
 	public GodotAdMob(Activity p_activity) {
 
-		registerClass("AdMob", new String[] {"LoadBanner", "HideBanner",
-				"ShowBannerBottomLeft", "ShowBannerBottomRight", "ShowBannerBottomCenter", "ShowBannerTopLeft", "ShowBannerTopRight", "ShowBannerTopCenter",
+		registerClass("AdMob", new String[] {"LoadBanner", "ShowBanner", "HideBanner",
+				"SetBannerBottomLeft", "SetBannerBottomRight", "SetBannerBottomCenter", "SetBannerTopLeft", "SetBannerTopRight", "SetBannerTopCenter",
 				"HasReceiveAd", "HasDismissScreen", "HasFailedToReceive","HasLeaveApplication","HasPresentScreen",
 				"LoadInterstitial", "ShowInterstitial",
 				"HasInterstitialReceiveAd", "HasInterstitialDismissScreen", "HasInterstitialFailedToReceive","HasInterstitialLeaveApplication","HasInterstitialPresentScreen"});
 
-		
 		activity=p_activity;
 		initialized = false;
-		
+
 		verticalLayoutRule = RelativeLayout.ALIGN_PARENT_BOTTOM;
-		horizontalLayoutRule = RelativeLayout.CENTER_HORIZONTAL;	
+		horizontalLayoutRule = RelativeLayout.CENTER_HORIZONTAL;
 
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
@@ -468,7 +479,29 @@ public class GodotAdMob extends Godot.SingletonBase {
 				String interstitial_id = GodotLib.getGlobal("admob/interstitial_id");
 				boolean test_mode = GodotLib.getGlobal("admob/test_mode").toLowerCase().equals("true");
 				boolean smart_banner = GodotLib.getGlobal("admob/smart_banner").toLowerCase().equals("true");
-                String test_devices = GodotLib.getGlobal("admob/test_devices");
+				String test_devices = GodotLib.getGlobal("admob/test_devices");
+				String banner_pos = GodotLib.getGlobal("admob/banner_pos").toLowerCase();
+
+				if (banner_pos.equals("topleft")) {
+					verticalLayoutRule = RelativeLayout.ALIGN_PARENT_TOP;
+					horizontalLayoutRule = RelativeLayout.ALIGN_PARENT_LEFT;
+				} else if (banner_pos.equals("topcenter")) {
+					verticalLayoutRule = RelativeLayout.ALIGN_PARENT_TOP;
+					horizontalLayoutRule = RelativeLayout.CENTER_HORIZONTAL;
+				} else if (banner_pos.equals("topright")) {
+					verticalLayoutRule = RelativeLayout.ALIGN_PARENT_TOP;
+					horizontalLayoutRule = RelativeLayout.ALIGN_PARENT_RIGHT;
+				} else if (banner_pos.equals("bottomleft")) {
+					verticalLayoutRule = RelativeLayout.ALIGN_PARENT_BOTTOM;
+					horizontalLayoutRule = RelativeLayout.ALIGN_PARENT_LEFT;
+				} else if (banner_pos.equals("bottomcenter")) {
+					verticalLayoutRule = RelativeLayout.ALIGN_PARENT_BOTTOM;
+					horizontalLayoutRule = RelativeLayout.CENTER_HORIZONTAL;
+				} else if (banner_pos.equals("bottomright")) {
+					verticalLayoutRule = RelativeLayout.ALIGN_PARENT_BOTTOM;
+					horizontalLayoutRule = RelativeLayout.ALIGN_PARENT_RIGHT;
+				}
+
 				if (test_mode) {
 					Log.d("godot", "test mode on: " + test_devices);
 				} else {

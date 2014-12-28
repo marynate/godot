@@ -6,5 +6,5 @@ sources = string.split("""admob_ios.mm
 
 Import('env')
 
-if (env["platform"]=="iphone"):
+if (env["platform"]=="iphone" or env["platform"]=="isim"):
 	env.add_source_files(env.modules_sources, sources)

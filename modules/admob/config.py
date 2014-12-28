@@ -1,9 +1,9 @@
 def can_build(plat):
-	return plat =="iphone" or plat=="android"
+	return plat =="iphone" or plat =="isim" or plat=="android"
 
 def configure(env):
 
-	if env['platform'] == "iphone":
+	if (env['platform'] == "iphone" or env['platform'] == "isim"):
 		
 		env.Append(LINKFLAGS=['-ObjC','-framework','AdSupport','-framework','AudioToolbox','-framework','AVFoundation','-framework','CoreGraphics','-framework','CoreTelephony','-framework','MessageUI','-framework','StoreKit','-framework','SystemConfiguration','-framework','EventKit','-framework','EventKitUI'])
 		env.Append(LIBPATH=['#modules/admob/sdk'])

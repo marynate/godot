@@ -17,7 +17,12 @@ class AdMob_iOS : public Object {
 	BannerPtr banner;
 	InterstitialPtr interstitial;
 	
-	String AdMobId;
+	String banner_id;
+	String interstitial_id;
+	String test_mode;
+	String smart_banner;
+	String test_devices;
+	String banner_pos;
 	
 	static AdMob_iOS* instance;
 	static void _bind_methods();
@@ -28,16 +33,30 @@ class AdMob_iOS : public Object {
 public:
 	static AdMob_iOS* get_singleton();
 
+	void LoadBanner();
 	void ShowBanner();
 	void HideBanner();
-	void SetBannerBottomLeft();
 	void SetBannerTopLeft();
-	void ShowInterstitial();
+	void SetBannerTopRight();
+	void SetBannerTopCenter();
+	void SetBannerBottomLeft();
+	void SetBannerBottomRight();
+	void SetBannerBottomCenter();
+
 	bool HasReceiveAd();
 	bool HasDismissScreen();
 	bool HasFailedToReceive();
 	bool HasLeaveApplication();
 	bool HasPresentScreen();
+
+	void LoadInterstitial();
+	void ShowInterstitial();
+
+	bool HasInterstitialReceiveAd();
+	bool HasInterstitialDismissScreen();
+	bool HasInterstitialFailedToReceive();
+	bool HasInterstitialLeaveApplication();
+	bool HasInterstitialPresentScreen();
 			
 	
 	AdMob_iOS();

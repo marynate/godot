@@ -343,6 +343,8 @@ static void clear_touches() {
 	[self destroyFramebuffer];
 	[self createFramebuffer];
 	[self drawView];
+    
+    [super layoutSubviews];
 }
 
 - (BOOL)createFramebuffer
