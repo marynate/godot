@@ -1126,6 +1126,7 @@ void Control::_window_input_event(InputEvent p_event) {
 				over = _find_control_at_pos(this,pos,parent_xform,window->focus_inv_xform);
 			}
 
+
 			if (window->drag_data.get_type()==Variant::NIL && over && !window->modal_stack.empty()) {
 
 				Control *top = window->modal_stack.back()->get();
@@ -2267,6 +2268,7 @@ void Control::_window_sort_subwindows() {
 		return;
 
 	window->modal_stack.sort_custom<CComparator>();
+	window->subwindows.sort_custom<CComparator>();
 	window->subwindow_order_dirty=false;
 
 }
