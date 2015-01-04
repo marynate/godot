@@ -3814,8 +3814,8 @@ EditorNode::EditorNode() {
 		resources_dock->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 		top_pallete->add_child(resources_dock);
 
-		EmptyControl *editor_spacer = memnew( EmptyControl );
-		editor_spacer->set_minsize(Size2(260,200));
+		Control *editor_spacer = memnew( Control );
+		editor_spacer->set_custom_minimum_size(Size2(260,200));
 		editor_spacer->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 		editor_spacer->add_child( top_pallete );
 		editor_palletes_split->add_child( editor_spacer );
@@ -3835,8 +3835,8 @@ EditorNode::EditorNode() {
 		prop_editor_base->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 		prop_pallete->add_child(prop_editor_base);
 
-		editor_spacer = memnew( EmptyControl );
-		editor_spacer->set_minsize(Size2(260,200));
+		editor_spacer = memnew( Control );
+		editor_spacer->set_custom_minimum_size(Size2(260,200));
 		editor_spacer->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 		editor_spacer->add_child( prop_pallete );
 		editor_palletes_split->add_child( editor_spacer );
