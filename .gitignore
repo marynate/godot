@@ -265,3 +265,4 @@ Desktop.ini
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 logo.h
+*.autosave
