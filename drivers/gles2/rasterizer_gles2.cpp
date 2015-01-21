@@ -4588,7 +4588,7 @@ void RasterizerGLES2::_update_shader( Shader* p_shader) const {
 			enablers.push_back("#define USE_TEXPIXEL_SIZE\n");
 		}
 
-		if (fragment_flags.uses_worldvec) {
+		if (vertex_flags.uses_worldvec) {
 			enablers.push_back("#define USE_WORLD_VEC\n");
 		}
 		canvas_shader.set_custom_shader_code(p_shader->custom_code_id,vertex_code, vertex_globals,fragment_code, light_code, fragment_globals,uniform_names,enablers);
@@ -4962,15 +4962,19 @@ _FORCE_INLINE_ void RasterizerGLES2::_update_material_shader_params(Material *p_
 		bool has_old = OLD;
 		bool old_inuse=has_old && old_mparams[E->key()].inuse;
 
-		if (!has_old || !old_inuse)
+		ud.istexture=(E->get().type==ShaderLanguage::TYPE_TEXTURE || E->get().type==ShaderLanguage::TYPE_CUBEMAP);
+
+		if (!has_old || !old_inuse) {
 			keep=false;
+		}
 		else if (OLD->get().value.get_type()!=E->value().default_value.get_type()) {
 
 			if (OLD->get().value.get_type()==Variant::INT && E->get().type==ShaderLanguage::TYPE_FLOAT) {
 				//handle common mistake using shaders (feeding ints instead of float)
 				OLD->get().value=float(OLD->get().value);
 				keep=true;
-			} else if (E->value().default_value.get_type()!=Variant::NIL) {
+			} else if (!ud.istexture && E->value().default_value.get_type()!=Variant::NIL) {
+
 				keep=false;
 			}
 			//type changed between old and new
@@ -4984,7 +4988,6 @@ _FORCE_INLINE_ void RasterizerGLES2::_update_material_shader_params(Material *p_
 			;
 		}
 
-		ud.istexture=(E->get().type==ShaderLanguage::TYPE_TEXTURE || E->get().type==ShaderLanguage::TYPE_CUBEMAP);
 
 		if (keep) {
 			ud.value=old_mparams[E->key()].value;
