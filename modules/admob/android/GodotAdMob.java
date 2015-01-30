@@ -66,6 +66,7 @@ public class GodotAdMob extends Godot.SingletonBase {
 		activity.runOnUiThread(new Runnable() {
 			public void run() {
 				adView.setVisibility(View.VISIBLE);
+				SetAdViewLayout();
 			}
 		});
 	}
