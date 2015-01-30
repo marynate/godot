@@ -14,7 +14,7 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-  NSLog(@"AdMobInterstitial: viewDidLoad()");
+  //NSLog(@"AdMobInterstitial: viewDidLoad()");
 }
 
 - (void)initialize:(NSString*)p_interstitialID testMode:(BOOL)p_testMode  testDevices:(NSArray*)p_testDevices
@@ -32,30 +32,22 @@
 
 - (void)loadInterstitial
 {
-    NSLog(@"1");
+
     if (interstitial_)
     {
-        NSLog(@"2");
-        interstitial_.delegate = nil;
-        [interstitial_ release];
+		interstitial_.delegate = nil;
+		[interstitial_ release];
     }
-    NSLog(@"3");
 	interstitial_ = [[GADInterstitial alloc] init];
-    NSLog(@"4");
 	interstitial_.delegate = self;
-    NSLog(@"5");
 	interstitial_.adUnitID = interstitialID;
-       NSLog(@"6: %@", interstitialID);
 	GADRequest *request = [GADRequest request];
-    NSLog(@"7 %@", testDevices);
 	if (testMode) {
 	  request.testDevices = testDevices;
 	}
-        NSLog(@"8");
 
 	[interstitial_ loadRequest: request];
 
-    NSLog(@"9");
 	hasReceiveAd = NO;
 	hasDismissScreen = NO;
 	hasFailedReceiveAd = NO;

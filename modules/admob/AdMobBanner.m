@@ -5,12 +5,12 @@
 
 - (void)viewDidLoad {
 	[super viewDidLoad];
-	NSLog(@"AdMobBanner: viewDidLoad()");
+	//NSLog(@"AdMobBanner: viewDidLoad()");
 }
 
 - (void)viewDidUnload {
   [bannerView_ release];
-  NSLog(@"AdMobBanner: viewDidUnload()");
+  //NSLog(@"AdMobBanner: viewDidUnload()");
 }
 
 - (void)dealloc {
@@ -33,18 +33,22 @@
     testDevices = [p_testDevices copy];
 	bannerPos = [p_initialPosition copy];
     
-    NSLog(@"bannerPos: %@", bannerPos);
-    
-	if (smartBanner)
-	{
-		bannerView_ = [[GADBannerView alloc] initWithAdSize:kGADAdSizeSmartBannerLandscape];
-	} else {
-		bannerView_ = [[GADBannerView alloc] initWithAdSize:kGADAdSizeBanner];
+	//NSLog(@"bannerPos: %@", bannerPos);
+	GADAdSize adSize = kGADAdSizeBanner;
+	if (smartBanner) {
+		UIDeviceOrientation deviceOrientation = [UIDevice currentDevice].orientation;
+		if (UIDeviceOrientationIsLandscape(deviceOrientation)) {
+			adSize = kGADAdSizeSmartBannerLandscape;
+		} else if (UIDeviceOrientationIsPortrait(deviceOrientation)) {
+			adSize = kGADAdSizeSmartBannerPortrait;
+		}
 	}
+	bannerView_ = [[GADBannerView alloc] initWithAdSize:adSize];
 
 	bannerView_.adUnitID = bannerID;
 
 	bannerView_.rootViewController = [AppDelegate getViewController];
+	bannerView_.delegate = self;
 	rootView_ = [AppDelegate getViewController].view;
 	[rootView_ addSubview:bannerView_];
 
@@ -132,7 +136,26 @@
     
     bannerView_.hidden = YES;
 
-	NSLog(@"AdMobBanner: initialize()");
+	//NSLog(@"AdMobBanner: initialize()");
+}
+
+- (void)setBannerPos:(NSLayoutConstraint*)p_verticalConstraint horizontalConstraint:(NSLayoutConstraint*)p_horizontalConstraint
+{
+	/*
+	NSLog(@"old verticalConstraint: %@:", verticalConstraint);
+	NSLog(@"old horizontalConstraint: %@:", horizontalConstraint);
+	NSLog(@" => verticalConstraint: %@:", p_verticalConstraint);
+	NSLog(@" => horizontalConstraint: %@:", p_horizontalConstraint);
+	//*/
+
+	[rootView_ removeConstraint:verticalConstraint];	
+	[rootView_ removeConstraint:horizontalConstraint];
+
+	verticalConstraint = p_verticalConstraint;
+	horizontalConstraint = p_horizontalConstraint;
+
+	[rootView_ addConstraint:verticalConstraint];
+	[rootView_ addConstraint:horizontalConstraint];
 }
 
 - (void)loadBanner
@@ -144,81 +167,57 @@
 	}
 
 	[bannerView_ loadRequest:request];
-	NSLog(@"AdMobBanner: loadBanner()");
+	//NSLog(@"AdMobBanner: loadBanner()");
 }
 
 - (void)showBanner
 {
 	bannerView_.hidden = NO;
-	NSLog(@"AdMobBanner: showBanner()");
-}
-
-- (void)setBannerPos:(NSLayoutConstraint*)p_verticalConstraint horizontalConstraint:(NSLayoutConstraint*)p_horizontalConstraint
-{
-    NSLog(@"old verticalConstraint: %@:", verticalConstraint);
-    NSLog(@"old horizontalConstraint: %@:", horizontalConstraint);
-    
-    NSLog(@" => verticalConstraint: %@:", p_verticalConstraint);
-    NSLog(@" => horizontalConstraint: %@:", p_horizontalConstraint);
-
-    [rootView_ removeConstraint:verticalConstraint];
-	[rootView_ removeConstraint:horizontalConstraint];
-    
-	verticalConstraint = p_verticalConstraint;
-	horizontalConstraint = p_horizontalConstraint;
-    
-	[rootView_ addConstraint:verticalConstraint];
-	[rootView_ addConstraint:horizontalConstraint];
+	[self setBannerPos:verticalConstraint horizontalConstraint:horizontalConstraint];
+	//NSLog(@"AdMobBanner: showBanner()");
 }
 
 - (void)setBannerTopLeft
 {
-    [self setBannerPos:topConstraint horizontalConstraint:leftConstraint];
-	//bannerView_.hidden = NO;
-    NSLog(@"AdMobBanner: setBannerTopLeft()");
+	[self setBannerPos:topConstraint horizontalConstraint:leftConstraint];
+	//NSLog(@"AdMobBanner: setBannerTopLeft()");
 }
 
 - (void)setBannerTopCenter
 {
 	[self setBannerPos:topConstraint horizontalConstraint:centerConstraint];
-	//bannerView_.hidden = NO;
-	NSLog(@"AdMobBanner: setBannerTopCenter()");
+	//NSLog(@"AdMobBanner: setBannerTopCenter()");
 }
 
 - (void)setBannerTopRight
 {
 	[self setBannerPos:topConstraint horizontalConstraint:rightConstraint];
-	//bannerView_.hidden = NO;
-	NSLog(@"AdMobBanner: setBannerTopRight()");
+	//NSLog(@"AdMobBanner: setBannerTopRight()");
 }
 
 - (void)setBannerBottomLeft
 {
 	[self setBannerPos:bottomConstraint horizontalConstraint:leftConstraint];
-	//bannerView_.hidden = NO;
-	NSLog(@"AdMobBanner: setBannerBottomLeft()");
+	//NSLog(@"AdMobBanner: setBannerBottomLeft()");
 }
 
 - (void)setBannerBottomCenter
 {
     [self setBannerPos:bottomConstraint horizontalConstraint:centerConstraint];
-	//bannerView_.hidden = NO;
-	NSLog(@"AdMobBanner: setBannerBottomCenter()");
+	//NSLog(@"AdMobBanner: setBannerBottomCenter()");
 }
 
 - (void)setBannerBottomRight
 {
 	[self setBannerPos:bottomConstraint horizontalConstraint:rightConstraint];
-	//bannerView_.hidden = NO;
-	NSLog(@"AdMobBanner: setBannerBottomRight()");
+	//NSLog(@"AdMobBanner: setBannerBottomRight()");
 }
 
 - (void)hideBanner
 {
   bannerView_.hidden = YES;
-  NSLog(@"AdMobBanner: hideBanner()");
+  //NSLog(@"AdMobBanner: hideBanner()");
 }
-
 
 - (BOOL)HasReceiveAd
 {
@@ -255,14 +254,16 @@
   return tmp;
 }
 
-
 -(void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInt
 							   duration:(NSTimeInterval)duration {
-  if (smartBanner && UIInterfaceOrientationIsLandscape(toInt)) {
-	bannerView_.adSize = kGADAdSizeSmartBannerLandscape;
-  } else {
-	bannerView_.adSize = kGADAdSizeSmartBannerPortrait;
-  }
+	if (smartBanner) {
+
+		if (UIInterfaceOrientationIsLandscape(toInt)) {
+			bannerView_.adSize = kGADAdSizeSmartBannerLandscape;
+		} else {
+			bannerView_.adSize = kGADAdSizeSmartBannerPortrait;
+		}
+	}
 }
 
 #pragma mark GADBannerViewDelegate implementation
@@ -270,7 +271,7 @@
 - (void)adViewDidReceiveAd:(GADBannerView *)view
 {
 	hasReceiveAd = YES;
-	NSLog(@"AdMobl: didReceiveAd()");
+	NSLog(@"AdMob: didReceiveAd()");
 }
 
 - (void)adView:(GADBannerView *)view didFailToReceiveAdWithError:(GADRequestError *)error

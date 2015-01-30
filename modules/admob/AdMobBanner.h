@@ -1,6 +1,6 @@
 #import "sdk/GADBannerView.h"
 
-@interface AdMobBanner : UIViewController {
+@interface AdMobBanner : UIViewController <GADBannerViewDelegate>  {
 	GADBannerView *bannerView_;
 	UIView *rootView_;
 

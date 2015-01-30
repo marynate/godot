@@ -180,7 +180,6 @@ bool AdMob_iOS::HasReceiveAd()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: HasReceiveAd()");
 	return [banner HasReceiveAd];
   }
   return false;
@@ -190,7 +189,6 @@ bool AdMob_iOS::HasDismissScreen()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: HasDismissScreen()");
 	return [banner HasDismissScreen];
   }
   return false;
@@ -200,7 +198,6 @@ bool AdMob_iOS::HasFailedToReceive()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: HasFailedToReceive()");
 	return [banner HasFailedToReceive];
   }
   return false;
@@ -210,7 +207,6 @@ bool AdMob_iOS::HasLeaveApplication()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: HasLeaveApplication()");
 	return [banner HasLeaveApplication];
   }
   return false;
@@ -220,7 +216,6 @@ bool AdMob_iOS::HasPresentScreen()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: HasPresentScreen()");
 	return [banner HasPresentScreen];
   }
   return false;
@@ -248,8 +243,7 @@ bool AdMob_iOS::HasInterstitialReceiveAd()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: Interstitial HasReceiveAd()");
-    return [interstitial HasReceiveAd];
+	return [interstitial HasReceiveAd];
   }   
   return false;
 };
@@ -258,8 +252,7 @@ bool AdMob_iOS::HasInterstitialDismissScreen()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: Interstitial HasDismissScreen()");
-    return [interstitial HasDismissScreen];
+	return [interstitial HasDismissScreen];
   }    
   return false;  
 };
@@ -268,7 +261,6 @@ bool AdMob_iOS::HasInterstitialFailedToReceive()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: Interstitial HasFailedToReceive()");
 	return [interstitial HasFailedToReceive];
   }    
   return false;  
@@ -278,8 +270,7 @@ bool AdMob_iOS::HasInterstitialLeaveApplication()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: Interstitial HasLeaveApplication()");
-    return [interstitial HasLeaveApplication];
+	return [interstitial HasLeaveApplication];
   }    
   return false;  
 };
@@ -288,8 +279,7 @@ bool AdMob_iOS::HasInterstitialPresentScreen()
 {
   if (initialized)
   {
-	NSLog(@"AdMob_iOS: Interstitial HasPresentScreen()");
-    return [interstitial HasPresentScreen];
+	return [interstitial HasPresentScreen];
   }    
   return false;  
 };
