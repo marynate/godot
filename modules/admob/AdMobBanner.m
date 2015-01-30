@@ -126,7 +126,8 @@
 
 	bannerView_.translatesAutoresizingMaskIntoConstraints = NO;
 	[rootView_ addConstraint:verticalConstraint];
-	[rootView_ addConstraint:horizontalConstraint];
+	if (!smartBanner)
+		[rootView_ addConstraint:horizontalConstraint];
 
 	hasReceiveAd = NO;
 	hasDismissScreen = NO;
@@ -148,14 +149,16 @@
 	NSLog(@" => horizontalConstraint: %@:", p_horizontalConstraint);
 	//*/
 
-	[rootView_ removeConstraint:verticalConstraint];	
-	[rootView_ removeConstraint:horizontalConstraint];
+	[rootView_ removeConstraint:verticalConstraint];
+	if (!smartBanner)
+		[rootView_ removeConstraint:horizontalConstraint];
 
 	verticalConstraint = p_verticalConstraint;
 	horizontalConstraint = p_horizontalConstraint;
 
 	[rootView_ addConstraint:verticalConstraint];
-	[rootView_ addConstraint:horizontalConstraint];
+	if (!smartBanner)
+		[rootView_ addConstraint:horizontalConstraint];
 }
 
 - (void)loadBanner
